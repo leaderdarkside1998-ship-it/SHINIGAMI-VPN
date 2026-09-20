@@ -20,7 +20,11 @@ data class OptimizeDiagnostics(
     val routeScore: Double? = null,
     val status: String = "INACTIVE",
     val routeLock: Boolean = false,
-    val lastCheckMillis: Long? = null
+    val lastCheckMillis: Long? = null,
+    val modeEnabled: Boolean = false,
+    val selectedAppCount: Int = 0,
+    val vpnActive: Boolean = false,
+    val perAppRoutingActive: Boolean = false
 )
 
 data class DnsDiagnostics(

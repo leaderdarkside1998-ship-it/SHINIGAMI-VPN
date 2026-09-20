@@ -1,5 +1,10 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -13,6 +18,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,6 +32,8 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +45,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -222,7 +231,6 @@ private fun ServerListPage(
                                 actions = actions
                             )
                         }
-                        ItemDivider()
                     }
                 } else {
                     ServerItemRow(
@@ -230,7 +238,6 @@ private fun ServerListPage(
                         isSelected = row.guid == selectedGuid,
                         actions = actions
                     )
-                    ItemDivider()
                 }
             }
         }
@@ -297,7 +304,6 @@ private fun ServerItemColumn(
             doubleColumnDisplay = doubleColumnDisplay,
             actions = actions
         )
-        ItemDivider()
     }
 }
 
@@ -318,6 +324,36 @@ private fun ServerListItem(
     } else {
         null
     }
+
+    // Professional, subtle "pop in" entrance for each server card: fades and scales up once
+    // when it first appears (e.g. on load, search, or reorder), rather than snapping in.
+    val entrance = remember(row.guid) { Animatable(0f) }
+    LaunchedEffect(row.guid) {
+        entrance.snapTo(0f)
+        entrance.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
+        )
+    }
+    val cardElevation by animateDpAsState(
+        targetValue = if (isSelected) 4.dp else 1.dp,
+        label = "server_card_elevation"
+    )
+
+    Card(
+        modifier = Modifier
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .graphicsLayer {
+                alpha = entrance.value
+                val scale = 0.92f + entrance.value * 0.08f
+                scaleX = scale
+                scaleY = scale
+            },
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
+        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+    ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -424,6 +460,7 @@ private fun ServerListItem(
                 )
             }
         }
+    }
     }
 }
 

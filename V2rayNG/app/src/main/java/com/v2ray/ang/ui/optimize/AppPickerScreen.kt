@@ -107,52 +107,54 @@ fun AppPickerScreen(
                 modifier = Modifier.fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface
             ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = switchLabel,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Switch(
-                        checked = enabled,
-                        modifier = Modifier.scale(0.8f),
-                        onCheckedChange = onEnabledChanged,
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
-                            checkedTrackColor = MaterialTheme.colorScheme.secondary
-                        )
-                    )
-                }
-                if (routeLockLabel != null && onRouteLockChanged != null) {
+                Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = routeLockLabel,
+                            text = switchLabel,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.weight(1f)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Switch(
-                            checked = routeLocked,
+                            checked = enabled,
                             modifier = Modifier.scale(0.8f),
-                            onCheckedChange = onRouteLockChanged,
+                            onCheckedChange = onEnabledChanged,
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
                                 checkedTrackColor = MaterialTheme.colorScheme.secondary
                             )
                         )
+                    }
+                    if (routeLockLabel != null && onRouteLockChanged != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = routeLockLabel,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Switch(
+                                checked = routeLocked,
+                                modifier = Modifier.scale(0.8f),
+                                onCheckedChange = onRouteLockChanged,
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = MaterialTheme.colorScheme.onSecondary,
+                                    checkedTrackColor = MaterialTheme.colorScheme.secondary
+                                )
+                            )
+                        }
                     }
                 }
             }

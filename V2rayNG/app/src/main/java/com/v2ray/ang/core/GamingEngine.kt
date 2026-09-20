@@ -93,7 +93,7 @@ object GamingEngine {
     private suspend fun tick(context: Context, groupId: String) {
         val currentGuid = MmkvManager.getSelectServer()
         if (currentGuid.isNullOrEmpty()) {
-            _diagnostics.value = OptimizeDiagnostics(mode = "GAMING", label = "N/A", status = "INACTIVE")
+            _diagnostics.value = OptimizeDiagnostics(mode = "GAMING", label = "N/A", status = "INACTIVE", modeEnabled = true, vpnActive = false)
             return
         }
         val config = MmkvManager.decodeServerConfig(currentGuid)
@@ -107,7 +107,7 @@ object GamingEngine {
         val selectedGames = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_GAMING_APPS_SET)?.toList() ?: emptyList()
         val label = if (selectedGames.isEmpty()) "N/A" else selectedGames.joinToString(", ")
 
-        publish(currentGuid, config, metrics, locked, label)
+        publish(currentGuid, config, metrics, locked, label, selectedGames.size)
 
         pendingRollback?.let { pending ->
             pendingRollback = null
@@ -173,8 +173,16 @@ object GamingEngine {
         config: com.v2ray.ang.dto.entities.ProfileItem?,
         metrics: RouteMetrics,
         locked: Boolean,
-        label: String
+        label: String,
+        selectedAppCount: Int
     ) {
+        // Mirrors the exact branch in CoreVpnService.configurePerAppProxy() where selected
+        // Gaming apps actually get merged into the VpnService.Builder allow/disallow list --
+        // i.e. this is true only when that code path genuinely runs, not a guess.
+        val perAppProxyEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY) == true
+        val perAppProxySetNotEmpty = !MmkvManager.decodeSettingsStringSet(AppConfig.PREF_PER_APP_PROXY_SET).isNullOrEmpty()
+        val perAppRoutingActive = selectedAppCount > 0 && perAppProxyEnabled && perAppProxySetNotEmpty
+
         _diagnostics.value = OptimizeDiagnostics(
             mode = "GAMING",
             label = label,
@@ -189,7 +197,11 @@ object GamingEngine {
             stabilityScore = metrics.stabilityScore.takeIf { it >= 0 },
             status = if (metrics.isMeasurable && metrics.stabilityScore >= DEGRADED_SCORE_THRESHOLD) "ACTIVE" else "DEGRADED",
             routeLock = locked,
-            lastCheckMillis = System.currentTimeMillis()
+            lastCheckMillis = System.currentTimeMillis(),
+            modeEnabled = true,
+            selectedAppCount = selectedAppCount,
+            vpnActive = true,
+            perAppRoutingActive = perAppRoutingActive
         )
     }
 }

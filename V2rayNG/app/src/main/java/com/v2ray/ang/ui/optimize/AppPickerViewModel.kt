@@ -50,6 +50,9 @@ abstract class AppPickerViewModel(
         if (_enabled.value != value) {
             _enabled.value = value
             MmkvManager.encodeSettings(enabledKey, value)
+            // Toggling Gaming/Boost on or off changes what CoreVpnService.configurePerAppProxy()
+            // does, so the running VPN (if any) needs to actually rebuild for it to take effect.
+            SettingsChangeManager.makeRestartService()
         }
     }
 

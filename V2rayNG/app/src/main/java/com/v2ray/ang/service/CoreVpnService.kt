@@ -266,13 +266,25 @@ class CoreVpnService : VpnService(), ServiceControl {
     private fun configurePerAppProxy(builder: Builder) {
         val selfPackageName = BuildConfig.APPLICATION_ID
 
-        // If per-app proxy is not enabled, disallow the VPN service's own package and return
+        // Gaming Mode's selected apps (if enabled) must end up routed through this VPN
+        // regardless of how the general per-app-proxy list below is configured.
+        val gamingEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_ENABLED) == true
+        val gamingApps: Set<String> = if (gamingEnabled) {
+            MmkvManager.decodeSettingsStringSet(AppConfig.PREF_GAMING_APPS_SET) ?: emptySet()
+        } else {
+            emptySet()
+        }
+
+        // If per-app proxy is not enabled, disallow the VPN service's own package and return.
+        // Every other app -- including any selected Gaming apps -- already goes through the
+        // tunnel in this mode, so there is nothing extra to configure for Gaming here.
         if (MmkvManager.decodeSettingsBool(AppConfig.PREF_PER_APP_PROXY) == false) {
             builder.addDisallowedApplication(selfPackageName)
             return
         }
 
-        // If no apps are selected, disallow the VPN service's own package and return
+        // If no apps are selected, disallow the VPN service's own package and return. As above,
+        // this means every other app (Gaming apps included) is already tunneled.
         val apps = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_PER_APP_PROXY_SET)
         if (apps.isNullOrEmpty()) {
             builder.addDisallowedApplication(selfPackageName)
@@ -282,6 +294,18 @@ class CoreVpnService : VpnService(), ServiceControl {
         val bypassApps = MmkvManager.decodeSettingsBool(AppConfig.PREF_BYPASS_APPS)
         // Handle the VPN service's own package according to the mode
         if (bypassApps) apps.add(selfPackageName) else apps.remove(selfPackageName)
+
+        if (gamingApps.isNotEmpty()) {
+            if (bypassApps) {
+                // Bypass/disallow-list mode: the listed apps are EXCLUDED from the VPN, so make
+                // sure no selected Gaming app ends up excluded.
+                apps.removeAll(gamingApps)
+            } else {
+                // Allow-list mode: only listed apps use the VPN, so make sure every selected
+                // Gaming app is included even if the user never added it to per-app-proxy.
+                apps.addAll(gamingApps)
+            }
+        }
 
         apps.forEach {
             try {

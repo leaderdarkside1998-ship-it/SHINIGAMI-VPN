@@ -147,6 +147,10 @@ private fun formatScore(v: Double?): String = v?.let { "%.0f".format(it) } ?: NA
 
 private fun gamingRows(d: OptimizeDiagnostics): List<Pair<String, String>> = listOf(
     "MODE" to d.mode,
+    "GAMING ENABLED" to if (d.modeEnabled) "YES" else "NO",
+    "SELECTED APPS" to d.selectedAppCount.toString(),
+    "VPN" to if (d.vpnActive) "ACTIVE" else "INACTIVE",
+    "PER-APP ROUTING" to if (d.perAppRoutingActive) "ACTIVE" else "INACTIVE",
     "GAME" to d.label,
     "ROUTE" to (d.routeName ?: NA),
     "SERVER" to (d.server ?: NA),
