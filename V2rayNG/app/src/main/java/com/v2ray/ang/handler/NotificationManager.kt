@@ -118,7 +118,9 @@ object NotificationManager {
             .setContentTitle(currentConfig?.remarks ?: service.getString(R.string.app_name))
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true)
-            .setShowWhen(false)
+            .setShowWhen(true)
+            .setUsesChronometer(true)
+            .setWhen(System.currentTimeMillis())
             .setOnlyAlertOnce(true)
             .setContentIntent(contentPendingIntent)
             .addAction(

@@ -134,6 +134,15 @@
             android:name=".ui.perappproxy.PerAppProxyActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.optimize.GamingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.optimize.BoostActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.optimize.DiagnosticsActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.apppicker.AppPickerActivity"
             android:exported="false" />
         <activity

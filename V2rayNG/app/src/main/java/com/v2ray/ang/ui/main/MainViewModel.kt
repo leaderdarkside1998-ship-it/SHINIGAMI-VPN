@@ -293,6 +293,7 @@ class MainViewModel(
             MainAction.ExportAll -> exportAllAsync()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.SelectServer -> updateSelectedGuid(action.guid)
+            is MainAction.TestSingleServer -> testSingleServerRealPing(action.guid)
             is MainAction.RemoveServer -> removeServerAndRefresh(action.guid)
             is MainAction.Search -> filterConfig(action.query)
             is MainAction.ImportBatchConfig -> importBatchConfig(action.configText)
@@ -883,6 +884,47 @@ class MainViewModel(
         }
     }
 
+    /** Tests a single server's real ping, triggered by tapping its ping value directly. */
+    fun testSingleServerRealPing(guid: String) {
+        val groupId = uiState.value.selectedGroupId
+        mutableServerGroupState(groupId).update { current ->
+            current.copy(
+                servers = current.servers.map { server ->
+                    if (server.guid != guid || server.testDelayMillis == 0L) server
+                    else server.copy(testDelayMillis = 0L)
+                },
+                rows = current.rows.map { row ->
+                    if (row.guid != guid || row.testDelayMillis == 0L) row
+                    else row.copy(testDelayMillis = 0L)
+                }
+            )
+        }
+        val request = testRequests.beginBulk(groupId)
+        val message = TestServiceMessage(
+            key = AppConfig.MSG_MEASURE_CONFIG_START,
+            subscriptionId = groupId,
+            serverGuids = listOf(guid),
+            onlyTcp = false
+        )
+        _uiState.update {
+            it.copy(isTesting = true, status = MainStatus.Testing)
+        }
+        viewModelScope.launch {
+            withContext(ioDispatcher) {
+                dataSource.clearAllTestDelayResults(listOf(guid))
+                cacheMutex.withLock {
+                    groupDataCache[groupId]?.let { cached ->
+                        groupDataCache[groupId] = cached.map { server ->
+                            if (server.guid != guid || server.testDelayMillis == 0L) server
+                            else server.copy(testDelayMillis = 0L)
+                        }
+                    }
+                }
+            }
+            dataSource.sendMsg2TestService(message, request.id)
+        }
+    }
+
     private fun cancelPendingTestResults() {
         testResultFlushJob?.cancel()
         testResultFlushJob = null
@@ -930,10 +972,16 @@ class MainViewModel(
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
         _uiState.update { state ->
+            val wasRunning = state.isRunning
             state.copy(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
-                status = runningStatus(state.status, state.isRunning, running, clearTestingText)
+                status = runningStatus(state.status, state.isRunning, running, clearTestingText),
+                connectedSinceMillis = when {
+                    running && !wasRunning -> System.currentTimeMillis()
+                    !running -> null
+                    else -> state.connectedSinceMillis
+                }
             )
         }
     }

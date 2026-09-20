@@ -25,6 +25,7 @@
 
     <!--ServerActivity-->
     <string name="title_server">Config</string>
+    <string name="banner_buy_tunneled_servers">Buy tunneled servers — tap to click</string>
     <string name="menu_item_add_config">Add config</string>
     <string name="menu_item_save_config">Save config</string>
     <string name="menu_item_edit_config">Edit config</string>
@@ -164,6 +165,14 @@
     <string name="menu_item_export_proxy_app">Export to Clipboard</string>
     <string name="menu_item_import_proxy_app">Import from Clipboard</string>
     <string name="per_app_proxy_settings">Per-app settings</string>
+    <string name="title_gaming_mode">Gaming</string>
+    <string name="summary_gaming_mode">Route the selected games through the lowest-ping server, with no delay</string>
+    <string name="title_lock_gaming_route">Lock gaming route</string>
+    <string name="title_boost_mode">BOOST</string>
+    <string name="summary_boost_mode">Keep the selected apps on the fastest server when their speed drops</string>
+    <string name="title_diagnostics">Diagnostics</string>
+    <string name="title_auto_dns">Auto DNS selection</string>
+    <string name="summary_auto_dns">Benchmark public DNS resolvers and use the fastest, most reliable one</string>
     <string name="per_app_proxy_settings_enable">Enable per-app</string>
     <string name="app_picker_unknown_app">Unknown app (UID not recognized)</string>
 
@@ -285,15 +294,12 @@
     <string name="toast_tg_app_not_found">Telegram app not found</string>
     <string name="title_privacy_policy">Privacy policy</string>
     <string name="title_qr_code">QR code</string>
-    <string name="title_about">About the app</string>
     <string name="title_source_code">Source code</string>
     <string name="title_oss_license">Open-source licenses</string>
-    <string name="title_translators">Translators</string>
     <string name="title_tg_channel">Telegram channel</string>
     <string name="title_info">Info</string>
     <string name="title_developer_id">Developer</string>
 
-    <string name="title_pref_promotion">Promotion</string>
     <string name="title_pref_auto_update_subscription">Automatically update subscriptions</string>
     <string name="summary_pref_auto_update_subscription">Update your subscriptions automatically at set intervals in the background. Depending on the device, this feature may not always work</string>
     <string name="title_pref_auto_update_interval">Automatic update interval (minutes; minimum 15)</string>
@@ -308,6 +314,8 @@
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
     <string name="title_pref_app_accent_theme">App theme color</string>
+    <string name="title_pref_custom_accent_color">Custom color</string>
+    <string name="summary_pref_custom_accent_color">Pick any color for the app accent</string>
     <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">When enabled, TUN will use hev-socks5-tunnel; otherwise, it will use xray-core.</string>
     <string name="title_pref_hev_tunnel_loglevel">Hev TUN log level</string>
@@ -544,6 +552,7 @@
     <string name="acc_stop">Stop service</string>
     <string name="acc_back">Back</string>
     <string name="acc_search">Search</string>
+    <string name="acc_toggle_theme">Toggle dark / light theme</string>
     <string name="acc_add">Add configuration</string>
     <string name="acc_more">More options</string>
     <string name="acc_selected_server">Selected</string>

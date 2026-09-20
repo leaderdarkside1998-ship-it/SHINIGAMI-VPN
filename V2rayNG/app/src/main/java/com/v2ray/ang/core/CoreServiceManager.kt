@@ -235,6 +235,9 @@ object CoreServiceManager {
             MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
         }
         NotificationManager.startSpeedNotification()
+        GamingEngine.start(service, config.subscriptionId)
+        BoostEngine.start(service, config.subscriptionId)
+        DnsAutoEngine.start()
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core started successfully")
     }
 
@@ -328,6 +331,9 @@ object CoreServiceManager {
 
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
         NotificationManager.cancelNotification()
+        GamingEngine.stop()
+        BoostEngine.stop()
+        DnsAutoEngine.stop()
 
         try {
             service.unregisterReceiver(mMsgReceive)
@@ -486,6 +492,17 @@ object CoreServiceManager {
                 MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
             }
         }
+    }
+
+    /**
+     * Lets other real-network code (e.g. [com.v2ray.ang.core.DnsBenchmarkEngine]) protect a
+     * plain Java socket from being captured by the local VPN tunnel, the same way the native
+     * core protects its own sockets. Returns true (no protection needed) when not running as a
+     * VpnService, e.g. proxy-only mode, where there's no tun interface to loop through.
+     */
+    fun protectSocket(socket: java.net.DatagramSocket): Boolean {
+        val service = serviceControl?.get()?.getService()
+        return if (service is android.net.VpnService) service.protect(socket) else true
     }
 
     /**

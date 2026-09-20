@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.rememberScrollState
@@ -24,12 +25,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.AnimatedShinigamiIcon
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.ThemeManager
+import com.v2ray.ang.ui.compose.resolveDarkTheme
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 @Composable
 fun MainTopBar(
     isLoading: Boolean,
+    isTesting: Boolean,
     showSearch: Boolean,
     searchQuery: String,
     onSearchQueryChange: (String) -> Unit,
@@ -68,7 +73,19 @@ fun MainTopBar(
             }
         },
         actions = {
+            if (isTesting) {
+                AnimatedShinigamiIcon(modifier = Modifier.size(36.dp))
+            }
             if (!showSearch) {
+                val isDarkTheme = resolveDarkTheme()
+                IconButton(onClick = {
+                    ThemeManager.setThemeMode(if (isDarkTheme) "1" else "2")
+                }) {
+                    Icon(
+                        painterResource(if (isDarkTheme) R.drawable.ic_light_mode_24dp else R.drawable.ic_dark_mode_24dp),
+                        contentDescription = stringResource(R.string.acc_toggle_theme)
+                    )
+                }
                 IconButton(onClick = { onSearchToggle(true) }) {
                     Icon(painterResource(R.drawable.ic_search_24dp), contentDescription = stringResource(R.string.acc_search))
                 }

@@ -26,6 +26,9 @@ import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.ui.InfoActivity
 import com.v2ray.ang.ui.base.HelperBaseComponentActivity
+import com.v2ray.ang.ui.optimize.BoostActivity
+import com.v2ray.ang.ui.optimize.DiagnosticsActivity
+import com.v2ray.ang.ui.optimize.GamingActivity
 import com.v2ray.ang.ui.perappproxy.PerAppProxyActivity
 import com.v2ray.ang.ui.routing.RoutingSettingActivity
 import com.v2ray.ang.ui.server.ProfileEditorResult
@@ -138,6 +141,9 @@ class MainActivity : HelperBaseComponentActivity() {
         val intent = when (destination) {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
+            MainDestination.Gaming -> Intent(this, GamingActivity::class.java)
+            MainDestination.Boost -> Intent(this, BoostActivity::class.java)
+            MainDestination.Diagnostics -> Intent(this, DiagnosticsActivity::class.java)
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)
             MainDestination.UserAssets -> Intent(this, UserAssetActivity::class.java)
             MainDestination.Settings -> Intent(this, SettingsActivity::class.java)

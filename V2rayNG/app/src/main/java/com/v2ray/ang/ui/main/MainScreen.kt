@@ -25,9 +25,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.ProfileItem
+import com.v2ray.ang.ui.compose.BuyServersBanner
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -147,6 +150,7 @@ fun MainScreen(
             topBar = {
                 MainTopBar(
                     isLoading = isLoading,
+                    isTesting = uiState.isTesting,
                     showSearch = showSearch,
                     searchQuery = searchQuery,
                     onSearchQueryChange = { query: String ->
@@ -182,6 +186,7 @@ fun MainScreen(
                     displayText = displayText,
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
+                    connectedSinceMillis = uiState.connectedSinceMillis,
                     onAction = onAction
                 )
             },
@@ -195,6 +200,10 @@ fun MainScreen(
                         .fillMaxSize()
                         .padding(innerPadding)
                 ) {
+                    BuyServersBanner(
+                        text = stringResource(R.string.banner_buy_tunneled_servers),
+                        telegramUrl = "https://t.me/IDSHINIGAMI"
+                    )
                     if (groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
@@ -238,6 +247,7 @@ fun MainScreen(
                                 shareTarget = Triple(guid, profile, true)
                             },
                             onRemoveServer = removeServer,
+                            onTestServer = { guid -> onAction(MainAction.TestSingleServer(guid)) },
                             contentPadding = PaddingValues(
                                 start = 0.dp,
                                 top = 0.dp,

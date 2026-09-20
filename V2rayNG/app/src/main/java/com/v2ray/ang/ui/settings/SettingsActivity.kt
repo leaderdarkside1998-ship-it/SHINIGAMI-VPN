@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,7 @@ import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
 import com.v2ray.ang.ui.compose.AppAccentTheme
+import com.v2ray.ang.ui.compose.ColorPickerDialog
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import com.v2ray.ang.util.LogUtil
@@ -157,7 +159,7 @@ fun SettingsScreen(
 
     var speedEnabled by rememberMmkvBool(AppConfig.PREF_SPEED_ENABLED, false)
     var confirmRemove by rememberMmkvBool(AppConfig.PREF_CONFIRM_REMOVE, false)
-    var doubleColumnDisplay by rememberMmkvBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, false)
+    var doubleColumnDisplay by rememberMmkvBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, true)
     var groupAllDisplay by rememberMmkvBool(AppConfig.PREF_GROUP_ALL_DISPLAY, false)
     var language by remember {
         mutableStateOf(
@@ -299,6 +301,27 @@ fun SettingsScreen(
                         ThemeManager.setAccentTheme(AppAccentTheme.fromKey(it))
                     }
                 )
+                val useCustomAccent by ThemeManager.useCustomAccent.collectAsStateWithLifecycle()
+                val customAccentColor by ThemeManager.customAccentColor.collectAsStateWithLifecycle()
+                var showColorPicker by remember { mutableStateOf(false) }
+                SettingsMenuItem(
+                    title = stringResource(R.string.title_pref_custom_accent_color),
+                    subtitle = if (useCustomAccent) "#%06X".format(customAccentColor.toArgb() and 0xFFFFFF) else stringResource(R.string.summary_pref_custom_accent_color),
+                    onClick = { showColorPicker = true }
+                )
+                if (showColorPicker) {
+                    ColorPickerDialog(
+                        title = stringResource(R.string.title_pref_custom_accent_color),
+                        initialColor = customAccentColor,
+                        confirmText = stringResource(R.string.action_ok),
+                        dismissText = stringResource(R.string.action_cancel),
+                        onConfirm = {
+                            ThemeManager.setCustomAccentColor(it)
+                            showColorPicker = false
+                        },
+                        onDismiss = { showColorPicker = false }
+                    )
+                }
                 SettingsListItem(
                     title = stringResource(R.string.title_language),
                     entries = languageEntries,

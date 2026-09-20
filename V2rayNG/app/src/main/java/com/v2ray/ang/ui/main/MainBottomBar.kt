@@ -20,6 +20,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -33,12 +38,14 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
+import kotlinx.coroutines.delay
 
 @Composable
 fun MainBottomBar(
     displayText: String,
     isRunning: Boolean,
     isDarkTheme: Boolean,
+    connectedSinceMillis: Long?,
     onAction: (MainAction) -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
@@ -65,6 +72,9 @@ fun MainBottomBar(
                         contentDescription = displayText
                     }
                 )
+                if (isRunning && connectedSinceMillis != null) {
+                    ConnectionTimerText(connectedSinceMillis)
+                }
             }
         }
         FloatingActionButton(
@@ -89,4 +99,27 @@ fun MainBottomBar(
             )
         }
     }
+}
+
+/** Live "HH:MM:SS" (or "MM:SS" under an hour) elapsed since [connectedSinceMillis], ticking every second. */
+@Composable
+private fun ConnectionTimerText(connectedSinceMillis: Long) {
+    var elapsedSeconds by remember(connectedSinceMillis) {
+        mutableLongStateOf((System.currentTimeMillis() - connectedSinceMillis) / 1000)
+    }
+    LaunchedEffect(connectedSinceMillis) {
+        while (true) {
+            elapsedSeconds = (System.currentTimeMillis() - connectedSinceMillis) / 1000
+            delay(1000)
+        }
+    }
+    val h = elapsedSeconds / 3600
+    val m = (elapsedSeconds % 3600) / 60
+    val s = elapsedSeconds % 60
+    val text = if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+    Text(
+        text = text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.primary
+    )
 }

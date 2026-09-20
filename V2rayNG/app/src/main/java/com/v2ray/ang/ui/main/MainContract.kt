@@ -26,9 +26,10 @@ data class MainUiState(
     val isRunning: Boolean = false,
     val isTesting: Boolean = false,
     val status: MainStatus = MainStatus.Disconnected,
+    val connectedSinceMillis: Long? = null,
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
-    val doubleColumnDisplay: Boolean = false,
+    val doubleColumnDisplay: Boolean = true,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null
 )
 
@@ -59,6 +60,7 @@ sealed interface MainAction {
 
     data class SelectGroup(val groupId: String) : MainAction
     data class SelectServer(val guid: String) : MainAction
+    data class TestSingleServer(val guid: String) : MainAction
     data class RemoveServer(val guid: String) : MainAction
     data class EditServer(val guid: String, val profile: com.v2ray.ang.dto.entities.ProfileItem) : MainAction
     data class Search(val query: String) : MainAction

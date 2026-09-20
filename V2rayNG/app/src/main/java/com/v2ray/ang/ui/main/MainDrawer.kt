@@ -36,6 +36,9 @@ import com.v2ray.ang.ui.compose.verticalScrollbar
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
     Subscriptions(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting),
     PerAppProxy(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings),
+    Gaming(R.drawable.ic_gaming_24dp, R.string.title_gaming_mode),
+    Boost(R.drawable.ic_boost_24dp, R.string.title_boost_mode),
+    Diagnostics(R.drawable.ic_about_24dp, R.string.title_diagnostics),
     Routing(R.drawable.ic_routing_24dp, R.string.routing_settings_title),
     UserAssets(R.drawable.ic_file_24dp, R.string.title_user_asset_setting),
     Settings(R.drawable.ic_settings_24dp, R.string.title_settings),
@@ -45,6 +48,9 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
 private val primaryDrawerItems = listOf(
     MainDestination.Subscriptions,
     MainDestination.PerAppProxy,
+    MainDestination.Gaming,
+    MainDestination.Boost,
+    MainDestination.Diagnostics,
     MainDestination.Routing,
     MainDestination.UserAssets,
     MainDestination.Settings

@@ -19,6 +19,7 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
@@ -32,16 +33,52 @@ import kotlinx.coroutines.flow.asStateFlow
 // app bar, active drawer item, main FAB ring, etc. Everything else (surfaces,
 // backgrounds, error colors...) stays shared between accents so the app keeps a
 // consistent, readable look no matter which accent the user picks.
-enum class AppAccentTheme(
-    val primaryLight: Color,
-    val onPrimaryLight: Color,
-    val primaryContainerLight: Color,
-    val onPrimaryContainerLight: Color,
-    val primaryDark: Color,
-    val onPrimaryDark: Color,
-    val primaryContainerDark: Color,
+interface AccentColorSet {
+    val primaryLight: Color
+    val onPrimaryLight: Color
+    val primaryContainerLight: Color
+    val onPrimaryContainerLight: Color
+    val primaryDark: Color
+    val onPrimaryDark: Color
+    val primaryContainerDark: Color
     val onPrimaryContainerDark: Color
-) {
+}
+
+/**
+ * Lets the user pick any of the ~16 million RGB colors as the app's accent, instead of being
+ * limited to the fixed [AppAccentTheme] presets. Light/dark and container variants are derived
+ * from the picked color by keeping its hue+saturation and only shifting lightness.
+ */
+class CustomAccentColors(base: Color) : AccentColorSet {
+    private val hsl = FloatArray(3).also {
+        androidx.core.graphics.ColorUtils.colorToHSL(base.toArgb(), it)
+    }
+
+    private fun withLightness(lightness: Float): Color {
+        val arr = floatArrayOf(hsl[0], hsl[1].coerceAtLeast(0.35f), lightness)
+        return Color(androidx.core.graphics.ColorUtils.HSLToColor(arr))
+    }
+
+    override val primaryLight = withLightness(0.40f)
+    override val onPrimaryLight = Color.White
+    override val primaryContainerLight = withLightness(0.88f)
+    override val onPrimaryContainerLight = withLightness(0.16f)
+    override val primaryDark = withLightness(0.75f)
+    override val onPrimaryDark = withLightness(0.18f)
+    override val primaryContainerDark = withLightness(0.28f)
+    override val onPrimaryContainerDark = withLightness(0.90f)
+}
+
+enum class AppAccentTheme(
+    override val primaryLight: Color,
+    override val onPrimaryLight: Color,
+    override val primaryContainerLight: Color,
+    override val onPrimaryContainerLight: Color,
+    override val primaryDark: Color,
+    override val onPrimaryDark: Color,
+    override val primaryContainerDark: Color,
+    override val onPrimaryContainerDark: Color
+) : AccentColorSet {
     // Default SHINIGAMI look: white background + turquoise accent.
     Turquoise(
         primaryLight = Color(0xFF00A99D),
@@ -101,7 +138,7 @@ enum class AppAccentTheme(
     }
 }
 
-private fun buildLightColorScheme(accent: AppAccentTheme) = lightColorScheme(
+private fun buildLightColorScheme(accent: AccentColorSet) = lightColorScheme(
     primary = accent.primaryLight,
     onPrimary = accent.onPrimaryLight,
     primaryContainer = accent.primaryContainerLight,
@@ -138,7 +175,7 @@ private fun buildLightColorScheme(accent: AppAccentTheme) = lightColorScheme(
     surfaceContainerHighest = Color(0xFFE5E5E5), // Light Gray
 )
 
-private fun buildDarkColorScheme(accent: AppAccentTheme) = darkColorScheme(
+private fun buildDarkColorScheme(accent: AccentColorSet) = darkColorScheme(
     primary = accent.primaryDark,
     onPrimary = accent.onPrimaryDark,
     primaryContainer = accent.primaryContainerDark,
@@ -211,6 +248,23 @@ object ThemeManager {
     )
     val accentTheme: StateFlow<AppAccentTheme> = _accentTheme.asStateFlow()
 
+    private val _useCustomAccent = MutableStateFlow(
+        MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_CUSTOM_ACCENT, false)
+    )
+    val useCustomAccent: StateFlow<Boolean> = _useCustomAccent.asStateFlow()
+
+    private val _customAccentColor = MutableStateFlow(readCustomAccentColor())
+    val customAccentColor: StateFlow<Color> = _customAccentColor.asStateFlow()
+
+    private fun readCustomAccentColor(): Color {
+        val hex = MmkvManager.decodeSettingsString(AppConfig.PREF_CUSTOM_ACCENT_COLOR, null)
+        return try {
+            if (hex.isNullOrEmpty()) Color(0xFF00A99D) else Color(android.graphics.Color.parseColor(hex))
+        } catch (_: Exception) {
+            Color(0xFF00A99D)
+        }
+    }
+
     fun setThemeMode(mode: String) {
         MmkvManager.encodeSettings(AppConfig.PREF_UI_MODE_NIGHT, mode)
         _themeMode.value = mode
@@ -224,6 +278,17 @@ object ThemeManager {
     fun setAccentTheme(theme: AppAccentTheme) {
         MmkvManager.encodeSettings(AppConfig.PREF_APP_ACCENT_THEME, theme.name)
         _accentTheme.value = theme
+        MmkvManager.encodeSettings(AppConfig.PREF_USE_CUSTOM_ACCENT, false)
+        _useCustomAccent.value = false
+    }
+
+    /** Sets a custom, freely-picked (16.7M possible) RGB color as the app's accent. */
+    fun setCustomAccentColor(color: Color) {
+        val hex = String.format("#%06X", color.toArgb() and 0xFFFFFF)
+        MmkvManager.encodeSettings(AppConfig.PREF_CUSTOM_ACCENT_COLOR, hex)
+        MmkvManager.encodeSettings(AppConfig.PREF_USE_CUSTOM_ACCENT, true)
+        _customAccentColor.value = color
+        _useCustomAccent.value = true
     }
 
     fun refresh() {
@@ -233,6 +298,9 @@ object ThemeManager {
             MmkvManager.decodeSettingsBool(AppConfig.PREF_DYNAMIC_COLOR, false)
         _accentTheme.value =
             AppAccentTheme.fromKey(MmkvManager.decodeSettingsString(AppConfig.PREF_APP_ACCENT_THEME, null))
+        _useCustomAccent.value =
+            MmkvManager.decodeSettingsBool(AppConfig.PREF_USE_CUSTOM_ACCENT, false)
+        _customAccentColor.value = readCustomAccentColor()
     }
 }
 
@@ -255,14 +323,17 @@ fun AppTheme(
 ) {
     val dynamicColor by ThemeManager.dynamicColorEnabled.collectAsState()
     val accent by ThemeManager.accentTheme.collectAsState()
+    val useCustomAccent by ThemeManager.useCustomAccent.collectAsState()
+    val customAccentColor by ThemeManager.customAccentColor.collectAsState()
     val context = LocalContext.current
+    val effectiveAccent: AccentColorSet = if (useCustomAccent) CustomAccentColors(customAccentColor) else accent
     val colorScheme: ColorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
 
-        darkTheme -> buildDarkColorScheme(accent)
-        else -> buildLightColorScheme(accent)
+        darkTheme -> buildDarkColorScheme(effectiveAccent)
+        else -> buildLightColorScheme(effectiveAccent)
     }
     val snackbarController = rememberAppSnackbarController()
 

@@ -2,6 +2,7 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +77,7 @@ fun GroupPagerPage(
     onShareServer: (String, ProfileItem) -> Unit,
     onMoreServer: (String, ProfileItem) -> Unit,
     onRemoveServer: (String) -> Unit,
+    onTestServer: (String) -> Unit,
     contentPadding: PaddingValues
 ) {
     val groupStateFlow = remember(groupId) {
@@ -89,6 +91,7 @@ fun GroupPagerPage(
         onShareServer,
         onMoreServer,
         onRemoveServer,
+        onTestServer,
     ) {
         ServerRowActions(
             select = onSelectServer,
@@ -96,6 +99,7 @@ fun GroupPagerPage(
             share = onShareServer,
             more = onMoreServer,
             remove = onRemoveServer,
+            testPing = onTestServer,
         )
     }
     ServerListPage(
@@ -122,6 +126,7 @@ private class ServerRowActions(
     val share: (String, ProfileItem) -> Unit,
     val more: (String, ProfileItem) -> Unit,
     val remove: (String) -> Unit,
+    val testPing: (String) -> Unit,
 )
 
 @Composable
@@ -407,7 +412,17 @@ private fun ServerListItem(
             Spacer(modifier = Modifier.height(6.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(row.typeDescription, style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(testResult, style = MaterialTheme.typography.bodySmall, color = if (row.testDelayMillis < 0L) colorPingRed else colorPing, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    testResult,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (row.testDelayMillis < 0L) colorPingRed else colorPing,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { actions.testPing(row.guid) }
+                )
             }
         }
     }
