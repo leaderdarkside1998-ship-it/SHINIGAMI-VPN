@@ -146,7 +146,7 @@ object AppConfig {
     const val APP_PRIVACY_POLICY = "$GITHUB_RAW_URL/2dust/v2rayNG/master/CR.md"
     const val APP_PROMOTION_URL = "aHR0cHM6Ly85LjIzNDQ1Ni54eXovYWJjLmh0bWw="
     const val TG_CHANNEL_URL = "https://t.me/github_2dust"
-    const val DELAY_TEST_URL = "https://www.gstatic.com/generate_204"
+    const val DELAY_TEST_URL = "http://www.gstatic.com/generate_204"
     const val DELAY_TEST_URL2 = "https://www.google.com/generate_204"
     const val OBSERVATORY_LEAST_PING_INTERVAL = "3m"
     const val OBSERVATORY_LEAST_LOAD_INTERVAL = "5m"
@@ -158,9 +158,9 @@ object AppConfig {
     const val IP_API_URL = "https://api.ip.sb/geoip"
 
     /** DNS server addresses. */
-    const val DNS_PROXY = "https://dns.google/dns-query"
-    const val DNS_DIRECT = "localhost"
-    const val DNS_VPN = "8.8.8.8"
+    const val DNS_PROXY = "1.1.1.1,8.8.8.8"
+    const val DNS_DIRECT = "223.5.5.5,223.6.6.6,1.1.1.1,8.8.8.8"
+    const val DNS_VPN = "1.1.1.1"
     const val GEOSITE_PRIVATE = "geosite:private"
     const val GEOSITE_CN = "geosite:cn"
     const val GEOIP_PRIVATE = "geoip:private"
@@ -186,7 +186,8 @@ object AppConfig {
     const val DEFAULT_OUTBOUND_DOMAIN_RESOLVE_METHOD = "0"
     const val DEFAULT_VPN_BYPASS_LAN = "1"
     const val DEFAULT_HEV_TUNNEL_LOGLEVEL = "warn"
-    const val DEFAULT_MUX_XUDP_CONCURRENCY = "8"
+    const val DEFAULT_MUX_XUDP_CONCURRENCY = "16"
+    const val DEFAULT_MUX_XUDP_QUIC = "allow"
 
     /** Message constants for communication. */
     const val MSG_REGISTER_CLIENT = 1

@@ -2,7 +2,11 @@ package com.v2ray.ang.ui.main
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -41,6 +46,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -69,6 +77,7 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyGridState
 import sh.calvin.reorderable.rememberReorderableLazyListState
 import kotlin.math.abs
+import kotlinx.coroutines.delay
 
 @Composable
 fun GroupPagerPage(
@@ -438,25 +447,19 @@ private fun ServerListItem(
                 Text(
                     row.statistics,
                     Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
             Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(row.typeDescription, style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    testResult,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (row.testDelayMillis < 0L) colorPingRed else MaterialTheme.colorScheme.tertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) { actions.testPing(row.guid) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(row.typeDescription, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                PingSlot(
+                    delayMillis = row.testDelayMillis,
+                    resultText = testResult,
+                    onTest = { actions.testPing(row.guid) }
                 )
             }
         }
@@ -477,5 +480,92 @@ internal suspend fun PagerState.navigateToPageOptimized(
         animateScrollToPage(target)
     } else {
         scrollToPage(target)
+    }
+}
+
+/** How long a fresh ping result stays visible before the slot returns to the bolt icon. */
+private const val PING_RESULT_VISIBLE_MS = 4000L
+
+/** Safety net: stop the "testing" pulse if a result never arrives (cancelled / failed to start). */
+private const val PING_TEST_TIMEOUT_MS = 20000L
+
+/**
+ * Ping slot of a server card. Idle it shows a bolt icon (like the FL proxies screen); tapping it
+ * starts a test and the bolt pulses while it runs; the result is then shown for a few seconds and
+ * the slot goes back to the bolt so it can be tapped again straight away.
+ */
+@Composable
+private fun PingSlot(
+    delayMillis: Long,
+    resultText: String,
+    onTest: () -> Unit,
+) {
+    var testing by remember { mutableStateOf(false) }
+    var showResult by remember { mutableStateOf(false) }
+    var previous by remember { mutableLongStateOf(delayMillis) }
+
+    // A result "arrives" when the value goes from cleared (0) to something; values that were
+    // already stored before this card was shown stay hidden behind the bolt.
+    LaunchedEffect(delayMillis) {
+        val arrived = delayMillis != 0L && previous == 0L
+        previous = delayMillis
+        if (delayMillis == 0L) {
+            showResult = false
+            return@LaunchedEffect
+        }
+        if (arrived) {
+            testing = false
+            showResult = true
+            delay(PING_RESULT_VISIBLE_MS)
+            showResult = false
+        }
+    }
+    LaunchedEffect(testing) {
+        if (testing) {
+            delay(PING_TEST_TIMEOUT_MS)
+            testing = false
+        }
+    }
+
+    val pulse = rememberInfiniteTransition(label = "ping_pulse")
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.25f,
+        animationSpec = infiniteRepeatable(tween(450), RepeatMode.Reverse),
+        label = "ping_pulse_alpha"
+    )
+
+    Box(
+        modifier = Modifier
+            .height(24.dp)
+            .defaultMinSize(minWidth = 32.dp)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                testing = true
+                showResult = false
+                onTest()
+            },
+        contentAlignment = Alignment.CenterEnd
+    ) {
+        if (showResult && delayMillis != 0L) {
+            Text(
+                resultText,
+                style = MaterialTheme.typography.bodySmall,
+                color = if (delayMillis < 0L) colorPingRed else MaterialTheme.colorScheme.tertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        } else {
+            Icon(
+                painter = painterResource(R.drawable.ic_bolt_24dp),
+                contentDescription = stringResource(R.string.connection_test_pending),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(20.dp)
+                    .graphicsLayer { alpha = if (testing) pulseAlpha else 1f }
+            )
+        }
     }
 }

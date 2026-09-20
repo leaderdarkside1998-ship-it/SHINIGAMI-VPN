@@ -117,7 +117,7 @@ fun SettingsScreen(
     var advancedSettingsExpanded by rememberSaveable { mutableStateOf(true) }
     var modeSettingsExpanded by rememberSaveable { mutableStateOf(true) }
 
-    var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, true)
+    var localDns by rememberMmkvBool(AppConfig.PREF_LOCAL_DNS_ENABLED, false)
     var fakeDns by rememberMmkvBool(AppConfig.PREF_FAKE_DNS_ENABLED, true)
     var appendHttpProxy by rememberMmkvBool(AppConfig.PREF_APPEND_HTTP_PROXY, false)
     var vpnDns by rememberMmkvString(AppConfig.PREF_VPN_DNS, "")
@@ -125,10 +125,10 @@ fun SettingsScreen(
     var vpnInterfaceAddress by rememberMmkvString(AppConfig.PREF_VPN_INTERFACE_ADDRESS_CONFIG_INDEX, "0")
     var vpnMtu by rememberMmkvString(AppConfig.PREF_VPN_MTU, "")
 
-    var mux by rememberMmkvBool(AppConfig.PREF_MUX_ENABLED, false)
+    var mux by rememberMmkvBool(AppConfig.PREF_MUX_ENABLED, true)
     var muxConcurrency by rememberMmkvString(AppConfig.PREF_MUX_CONCURRENCY, "8")
     var muxXudpConcurrency by rememberMmkvString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY)
-    var muxXudpQuic by rememberMmkvString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
+    var muxXudpQuic by rememberMmkvString(AppConfig.PREF_MUX_XUDP_QUIC, AppConfig.DEFAULT_MUX_XUDP_QUIC)
 
     var fragment by rememberMmkvBool(AppConfig.PREF_FRAGMENT_ENABLED, false)
     var fragmentPackets by rememberMmkvString(AppConfig.PREF_FRAGMENT_PACKETS, "tlshello")
@@ -379,6 +379,7 @@ fun SettingsScreen(
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_vpn_dns),
                     value = vpnDns,
+                    multiline = true,
                     enabled = isVpn && !localDns,
                     onValueChanged = { vpnDns = it }
                 )
@@ -517,11 +518,13 @@ fun SettingsScreen(
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_remote_dns),
                     value = remoteDns,
+                    multiline = true,
                     onValueChanged = { remoteDns = it }
                 )
                 SettingsEditItem(
                     title = stringResource(R.string.title_pref_domestic_dns),
                     value = domesticDns,
+                    multiline = true,
                     onValueChanged = { domesticDns = it }
                 )
                 SettingsEditItem(

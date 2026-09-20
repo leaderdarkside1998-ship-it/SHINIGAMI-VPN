@@ -132,13 +132,15 @@ fun SettingsEditItem(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     isPassword: Boolean = false,
-    keyboardNumber: Boolean = false
+    keyboardNumber: Boolean = false,
+    /** Show a comma-separated list one item per line (used for DNS lists). */
+    multiline: Boolean = false
 ) {
     var showDialog by remember { mutableStateOf(false) }
     val description = if (isPassword) {
         if (value.isEmpty()) null else "******"
     } else {
-        value.ifEmpty { null }
+        value.ifEmpty { null }?.let { if (multiline) it.split(",").joinToString("\n") { s -> s.trim() } else it }
     }
 
     SettingsItemRow(

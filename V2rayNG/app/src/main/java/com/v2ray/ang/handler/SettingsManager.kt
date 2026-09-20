@@ -326,6 +326,10 @@ object SettingsManager {
         }
     }
 
+    /** Splits a DNS preference on commas and/or whitespace/newlines, dropping blanks. */
+    private fun splitDnsList(value: String): List<String> =
+        value.split(Regex("[,\\s]+")).filter { it.isNotEmpty() }
+
     /**
      * Get domestic DNS servers from preference.
      * @return A list of domestic DNS servers.
@@ -333,9 +337,9 @@ object SettingsManager {
     fun getDomesticDnsServers(): List<String> {
         val domesticDns =
             MmkvManager.decodeSettingsString(AppConfig.PREF_DOMESTIC_DNS) ?: AppConfig.DNS_DIRECT
-        val ret = domesticDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
+        val ret = splitDnsList(domesticDns).filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
         if (ret.isEmpty()) {
-            return listOf(AppConfig.DNS_DIRECT)
+            return splitDnsList(AppConfig.DNS_DIRECT)
         }
         return ret
     }
@@ -347,9 +351,9 @@ object SettingsManager {
     fun getRemoteDnsServers(): List<String> {
         val remoteDns =
             MmkvManager.decodeSettingsString(AppConfig.PREF_REMOTE_DNS) ?: AppConfig.DNS_PROXY
-        val ret = remoteDns.split(",").filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
+        val ret = splitDnsList(remoteDns).filter { Utils.isPureIpAddress(it) || Utils.isCoreDNSAddress(it) }
         if (ret.isEmpty()) {
-            return listOf(AppConfig.DNS_PROXY)
+            return splitDnsList(AppConfig.DNS_PROXY)
         }
         return ret
     }
@@ -360,7 +364,7 @@ object SettingsManager {
      */
     fun getVpnDnsServers(): List<String> {
         val vpnDns = MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_DNS) ?: AppConfig.DNS_VPN
-        return vpnDns.split(",").filter { Utils.isPureIpAddress(it) }
+        return splitDnsList(vpnDns).filter { Utils.isPureIpAddress(it) }
     }
 
     /**
@@ -468,6 +472,7 @@ object SettingsManager {
         ensureDefaultValue(AppConfig.PREF_HEV_TUNNEL_RW_TIMEOUT, AppConfig.HEVTUN_RW_TIMEOUT)
         ensureDefaultValue(AppConfig.PREF_MUX_CONCURRENCY, "8")
         ensureDefaultValue(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY)
+        ensureDefaultValue(AppConfig.PREF_MUX_XUDP_QUIC, AppConfig.DEFAULT_MUX_XUDP_QUIC)
         ensureDefaultValue(AppConfig.PREF_FRAGMENT_LENGTH, "50-100")
         ensureDefaultValue(AppConfig.PREF_FRAGMENT_INTERVAL, "10-20")
         ensureDefaultValue(AppConfig.PREF_FRAGMENT_MAXSPLIT, "10")

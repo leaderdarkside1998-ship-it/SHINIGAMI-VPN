@@ -34,4 +34,20 @@ internal class MainTestRequests {
     fun cancelBulk() {
         bulk = null
     }
+
+    /**
+     * Single-server pings are independent of each other and of the bulk test, so several can be
+     * in flight at once (tap server after server without waiting). Value = owning group id.
+     */
+    private val singles = mutableMapOf<String, String>()
+
+    fun beginSingle(groupId: String): String = UUID.randomUUID().toString().also { singles[it] = groupId }
+
+    fun singleGroup(id: String): String? = singles[id]
+
+    fun completeSingle(id: String): String? = singles.remove(id)
+
+    fun cancelSingles() {
+        singles.clear()
+    }
 }

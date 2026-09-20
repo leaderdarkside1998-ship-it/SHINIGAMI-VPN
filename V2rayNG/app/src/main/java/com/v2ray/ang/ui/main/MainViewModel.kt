@@ -155,17 +155,23 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigSuccess -> {
+                testRequests.singleGroup(event.requestId)?.let { groupId ->
+                    applySingleTestResult(groupId, event.result)
+                    return
+                }
                 val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
                 queueTestResult(event.result, request)
             }
 
             is MainServiceEvent.MeasureConfigNotify -> {
+                if (testRequests.singleGroup(event.requestId) != null) return
                 if (event.requestId == testRequests.bulk?.id) {
                     _uiState.update { it.copy(status = MainStatus.TestProgress(event.progress)) }
                 }
             }
 
             is MainServiceEvent.MeasureConfigFinish -> {
+                if (testRequests.completeSingle(event.requestId) != null) return
                 val request = testRequests.bulk?.takeIf { it.id == event.requestId } ?: return
                 val scheduledFlush = testResultFlushJob
                 testResultFlushJob = viewModelScope.launch {
@@ -181,9 +187,28 @@ class MainViewModel(
             }
 
             is MainServiceEvent.MeasureConfigCancelled -> {
+                if (testRequests.completeSingle(event.requestId) != null) return
                 if (testRequests.completeBulk(event.requestId) != null) {
                     cancelPendingTestResults()
                     resetTestStatus()
+                }
+            }
+        }
+    }
+
+    /** Applies one single-server ping result to the UI at once (no batching, no group reload). */
+    private fun applySingleTestResult(groupId: String, result: RealPingResult) {
+        val updates = mapOf(result.guid to result.delayMillis)
+        mutableServerGroupState(groupId).update { current ->
+            current.copy(
+                servers = applyTestDelayResults(current.servers, updates),
+                rows = applyTestDelayResultsToRows(current.rows, updates),
+            )
+        }
+        viewModelScope.launch(ioDispatcher) {
+            cacheMutex.withLock {
+                groupDataCache[groupId]?.let { cached ->
+                    groupDataCache[groupId] = applyTestDelayResults(cached, updates)
                 }
             }
         }
@@ -818,6 +843,7 @@ class MainViewModel(
         bulkTestJob?.cancel()
         bulkTestJob = null
         testRequests.cancelBulk()
+        testRequests.cancelSingles()
         testRequests.invalidateCurrent()
         cancelPendingTestResults()
         resetTestStatus()
@@ -884,44 +910,36 @@ class MainViewModel(
         }
     }
 
-    /** Tests a single server's real ping, triggered by tapping its ping value directly. */
+    /**
+     * Tests a single server's real ping, triggered by tapping its bolt/ping value directly.
+     * Runs as an independent request: no global "testing" state, no bulk-request replacement
+     * (so several servers can be tapped back to back), no batching delay and no full reload.
+     */
     fun testSingleServerRealPing(guid: String) {
         val groupId = uiState.value.selectedGroupId
-        mutableServerGroupState(groupId).update { current ->
-            current.copy(
-                servers = current.servers.map { server ->
-                    if (server.guid != guid || server.testDelayMillis == 0L) server
-                    else server.copy(testDelayMillis = 0L)
-                },
-                rows = current.rows.map { row ->
-                    if (row.guid != guid || row.testDelayMillis == 0L) row
-                    else row.copy(testDelayMillis = 0L)
-                }
-            )
-        }
-        val request = testRequests.beginBulk(groupId)
+        val requestId = testRequests.beginSingle(groupId)
         val message = TestServiceMessage(
             key = AppConfig.MSG_MEASURE_CONFIG_START,
             subscriptionId = groupId,
             serverGuids = listOf(guid),
             onlyTcp = false
         )
-        _uiState.update {
-            it.copy(isTesting = true, status = MainStatus.Testing)
+        // Clear the old value so the row goes back to "testing" and a fresh result is always seen.
+        val cleared = mapOf(guid to 0L)
+        mutableServerGroupState(groupId).update { current ->
+            current.copy(
+                servers = applyTestDelayResults(current.servers, cleared),
+                rows = applyTestDelayResultsToRows(current.rows, cleared),
+            )
         }
-        viewModelScope.launch {
-            withContext(ioDispatcher) {
-                dataSource.clearAllTestDelayResults(listOf(guid))
-                cacheMutex.withLock {
-                    groupDataCache[groupId]?.let { cached ->
-                        groupDataCache[groupId] = cached.map { server ->
-                            if (server.guid != guid || server.testDelayMillis == 0L) server
-                            else server.copy(testDelayMillis = 0L)
-                        }
-                    }
+        viewModelScope.launch(ioDispatcher) {
+            dataSource.clearAllTestDelayResults(listOf(guid))
+            cacheMutex.withLock {
+                groupDataCache[groupId]?.let { cached ->
+                    groupDataCache[groupId] = applyTestDelayResults(cached, cleared)
                 }
             }
-            dataSource.sendMsg2TestService(message, request.id)
+            dataSource.sendMsg2TestService(message, requestId)
         }
     }
 
@@ -998,7 +1016,7 @@ class MainViewModel(
     }
 
     companion object {
-        private const val TEST_RESULT_FLUSH_INTERVAL_MS = 500L
+        private const val TEST_RESULT_FLUSH_INTERVAL_MS = 100L
 
         /**
          * The status after a running or stopped signal. A test text survives a repeated signal

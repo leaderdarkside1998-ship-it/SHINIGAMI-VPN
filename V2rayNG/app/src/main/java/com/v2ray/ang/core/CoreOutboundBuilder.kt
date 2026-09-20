@@ -63,7 +63,7 @@ object CoreOutboundBuilder {
     /** Applies global outbound options (mux, protocol-specific tweaks, etc.). */
     private fun updateOutboundWithGlobalSettings(outbound: OutboundBean): Boolean {
         try {
-            var muxEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_MUX_ENABLED, false)
+            var muxEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_MUX_ENABLED, true)
             val protocol = outbound.protocol
             if (protocol.equals(EConfigType.SHADOWSOCKS.name, true)
                 || protocol.equals(EConfigType.SOCKS.name, true)
@@ -82,7 +82,7 @@ object CoreOutboundBuilder {
                 outbound.mux?.enabled = true
                 outbound.mux?.concurrency = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_CONCURRENCY, "8").orEmpty().toInt()
                 outbound.mux?.xudpConcurrency = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_CONCURRENCY, AppConfig.DEFAULT_MUX_XUDP_CONCURRENCY).orEmpty().toInt()
-                outbound.mux?.xudpProxyUDP443 = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_QUIC, "reject")
+                outbound.mux?.xudpProxyUDP443 = MmkvManager.decodeSettingsString(AppConfig.PREF_MUX_XUDP_QUIC, AppConfig.DEFAULT_MUX_XUDP_QUIC)
                 if (protocol.equals(EConfigType.VLESS.name, true) && outbound.settings?.flow?.isNotEmpty() == true) {
                     outbound.mux?.concurrency = -1
                 }

@@ -12,6 +12,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,8 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -47,8 +48,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
-import com.v2ray.ang.ui.compose.colorFabInactiveDark
-import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import kotlinx.coroutines.delay
 
 @Composable
@@ -86,53 +85,91 @@ fun MainBottomBar(
                 ShinigamiFallingCard()
             }
         }
-        if (isRunning && connectedSinceMillis != null) {
-            ConnectionTimerCard(
-                connectedSinceMillis = connectedSinceMillis,
+        if (isRunning) {
+            // NetMode-style controls: while running, a round "test connection" button sits above a
+            // red pill that holds the stop square and the live start-time counter. The pill takes
+            // the place of the start button, so tapping it stops the service.
+            Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(end = 12.dp)
-                    .offset(y = (-92).dp)
+                    .padding(end = ControlsEndPadding)
+                    .offset(y = (-104).dp)
+                    .navigationBarsPadding(),
+                horizontalAlignment = Alignment.End
+            ) {
+                FloatingActionButton(
+                    onClick = { onAction(MainAction.TestCurrentServer) },
+                    modifier = Modifier.size(ControlFabSize),
+                    shape = CircleShape,
+                    containerColor = ControlRed,
+                    contentColor = Color.White
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_show_chart_24dp),
+                        contentDescription = stringResource(R.string.connection_test_pending),
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+                Spacer(Modifier.height(24.dp))
+                StopTimerPill(
+                    connectedSinceMillis = connectedSinceMillis,
+                    onClick = { onAction(MainAction.ToggleService) }
+                )
+            }
+        } else {
+            FloatingActionButton(
+                onClick = { onAction(MainAction.ToggleService) },
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(end = ControlsEndPadding)
+                    .offset(y = (-28).dp)
                     .navigationBarsPadding()
-            )
-        }
-        FloatingActionButton(
-            onClick = { onAction(MainAction.ToggleService) },
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = 24.dp)
-                .offset(y = (-28).dp)
-                .navigationBarsPadding(),
-            containerColor = if (isRunning) MaterialTheme.colorScheme.primary
-            else if (isDarkTheme) colorFabInactiveDark
-            else colorFabInactiveLight
-        ) {
-            Icon(
-                painter = if (isRunning) painterResource(R.drawable.ic_stop_24dp)
-                else painterResource(R.drawable.ic_play_24dp),
-                contentDescription = stringResource(
-                    if (isRunning) R.string.acc_stop else R.string.acc_start
-                ),
-                tint = Color.White,
-                modifier = Modifier.size(24.dp)
-            )
+                    .size(ControlFabSize),
+                shape = CircleShape,
+                containerColor = ControlRed,
+                contentColor = Color.White
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_play_24dp),
+                    contentDescription = stringResource(R.string.acc_start),
+                    tint = Color.White,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
         }
     }
 }
 
-/** Small neat card that floats above the power button, showing the live connection timer. */
+private val ControlRed = Color(0xFFF44336)
+private val ControlFabSize = 56.dp
+private val ControlsEndPadding = 16.dp
+
+/** Red pill: white stop square + "HH:MM:SS" counter that starts at 00:00:00 when the service starts. */
 @Composable
-private fun ConnectionTimerCard(connectedSinceMillis: Long, modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
+    // Fall back to the moment the pill first appeared if the service has not reported a start time.
+    val fallbackStart = remember { System.currentTimeMillis() }
+    val since = connectedSinceMillis ?: fallbackStart
+    val stopDescription = stringResource(R.string.acc_stop)
+    Row(
+        modifier = Modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(ControlRed)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 20.dp)
+            .semantics { contentDescription = stopDescription },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(13.dp)
     ) {
-        ConnectionTimerText(
-            connectedSinceMillis = connectedSinceMillis,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+        Box(
+            modifier = Modifier
+                .size(15.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color.White)
         )
+        ConnectionTimerText(connectedSinceMillis = since)
     }
 }
 
@@ -169,26 +206,27 @@ private fun ShinigamiFallingCard() {
     }
 }
 
-/** Live "HH:MM:SS" (or "MM:SS" under an hour) elapsed since [connectedSinceMillis], ticking every second. */
+/** Live "HH:MM:SS" elapsed since [connectedSinceMillis], ticking every second. */
 @Composable
 private fun ConnectionTimerText(connectedSinceMillis: Long, modifier: Modifier = Modifier) {
     var elapsedSeconds by remember(connectedSinceMillis) {
-        mutableLongStateOf((System.currentTimeMillis() - connectedSinceMillis) / 1000)
+        mutableLongStateOf(((System.currentTimeMillis() - connectedSinceMillis) / 1000).coerceAtLeast(0))
     }
     LaunchedEffect(connectedSinceMillis) {
         while (true) {
-            elapsedSeconds = (System.currentTimeMillis() - connectedSinceMillis) / 1000
+            elapsedSeconds = ((System.currentTimeMillis() - connectedSinceMillis) / 1000).coerceAtLeast(0)
             delay(1000)
         }
     }
     val h = elapsedSeconds / 3600
     val m = (elapsedSeconds % 3600) / 60
-    val s = elapsedSeconds % 60
-    val text = if (h > 0) "%02d:%02d:%02d".format(h, m, s) else "%02d:%02d".format(m, s)
+    val sec = elapsedSeconds % 60
     Text(
-        text = text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.primary,
+        text = "%02d:%02d:%02d".format(h, m, sec),
+        color = Color.White,
+        fontSize = 16.sp,
+        letterSpacing = 0.5.sp,
+        maxLines = 1,
         modifier = modifier
     )
 }
