@@ -22,10 +22,11 @@ import java.text.Collator
  * installed apps, which ones the mode should apply to. The concrete subclasses only differ in
  * which MMKV keys they read/write.
  */
-abstract class AppPickerViewModel(application: Application) : BaseViewModel(application) {
-
-    protected abstract val enabledKey: String
-    protected abstract val selectedSetKey: String
+abstract class AppPickerViewModel(
+    application: Application,
+    private val enabledKey: String,
+    private val selectedSetKey: String
+) : BaseViewModel(application) {
 
     private val _enabled = MutableStateFlow(false)
     val enabled: StateFlow<Boolean> = _enabled.asStateFlow()
@@ -112,9 +113,8 @@ abstract class AppPickerViewModel(application: Application) : BaseViewModel(appl
 }
 
 /** Picks which installed games should be routed through the lowest-ping server, with no delay. */
-class GamingAppsViewModel(application: Application) : AppPickerViewModel(application) {
-    override val enabledKey = AppConfig.PREF_GAMING_ENABLED
-    override val selectedSetKey = AppConfig.PREF_GAMING_APPS_SET
+class GamingAppsViewModel(application: Application) :
+    AppPickerViewModel(application, AppConfig.PREF_GAMING_ENABLED, AppConfig.PREF_GAMING_APPS_SET) {
 
     private val _routeLocked = MutableStateFlow(
         MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_ROUTE_LOCK, false)
@@ -128,7 +128,5 @@ class GamingAppsViewModel(application: Application) : AppPickerViewModel(applica
 }
 
 /** Picks which installed apps (Telegram, YouTube, etc.) BOOST should keep on the fastest server. */
-class BoostAppsViewModel(application: Application) : AppPickerViewModel(application) {
-    override val enabledKey = AppConfig.PREF_BOOST_ENABLED
-    override val selectedSetKey = AppConfig.PREF_BOOST_APPS_SET
-}
+class BoostAppsViewModel(application: Application) :
+    AppPickerViewModel(application, AppConfig.PREF_BOOST_ENABLED, AppConfig.PREF_BOOST_APPS_SET)

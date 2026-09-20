@@ -138,19 +138,30 @@ enum class AppAccentTheme(
     }
 }
 
+/** Rotates [base]'s hue by [degreesShift] (keeping its saturation), optionally pinning lightness,
+ * so secondary/tertiary roles can be derived from whichever accent color is active instead of
+ * being fixed regardless of the user's choice. */
+private fun rotateHue(base: Color, degreesShift: Float, lightness: Float? = null): Color {
+    val hsl = FloatArray(3)
+    androidx.core.graphics.ColorUtils.colorToHSL(base.toArgb(), hsl)
+    hsl[0] = (hsl[0] + degreesShift).let { if (it < 0) it + 360 else it % 360 }
+    if (lightness != null) hsl[2] = lightness
+    return Color(androidx.core.graphics.ColorUtils.HSLToColor(hsl))
+}
+
 private fun buildLightColorScheme(accent: AccentColorSet) = lightColorScheme(
     primary = accent.primaryLight,
     onPrimary = accent.onPrimaryLight,
     primaryContainer = accent.primaryContainerLight,
     onPrimaryContainer = accent.onPrimaryContainerLight,
-    secondary = Color(0xFFf97910), // Orange
+    secondary = rotateHue(accent.primaryLight, 40f, 0.42f),
     onSecondary = Color(0xFFFFFFFF), // White
-    secondaryContainer = Color(0xFFFFE8D6), // Pale Orange
-    onSecondaryContainer = Color(0xFF2B1700), // Dark Brown
-    tertiary = Color(0xFF009966), // Green
+    secondaryContainer = rotateHue(accent.primaryLight, 40f, 0.90f),
+    onSecondaryContainer = rotateHue(accent.primaryLight, 40f, 0.16f),
+    tertiary = rotateHue(accent.primaryLight, -40f, 0.36f),
     onTertiary = Color(0xFFFFFFFF), // White
-    tertiaryContainer = Color(0xFFA0F2D0), // Light Green
-    onTertiaryContainer = Color(0xFF00201A), // Dark Teal
+    tertiaryContainer = rotateHue(accent.primaryLight, -40f, 0.88f),
+    onTertiaryContainer = rotateHue(accent.primaryLight, -40f, 0.14f),
     error = Color(0xFFBA1A1A), // Red
     errorContainer = Color(0xFFFFDAD6), // Light Red
     onError = Color(0xFFFFFFFF), // White
@@ -159,7 +170,7 @@ private fun buildLightColorScheme(accent: AccentColorSet) = lightColorScheme(
     onBackground = Color(0xFF1C1B1F), // Near Black
     surface = Color(0xFFFFFFFF), // White
     onSurface = Color(0xFF1C1B1F), // Near Black
-    surfaceVariant = Color(0xFFE7E0EC), // Light Purple Gray
+    surfaceVariant = rotateHue(accent.primaryLight, 0f, 0.92f),
     onSurfaceVariant = Color(0xFF49454F), // Dark Gray
     outline = Color(0xFF79747E), // Medium Gray
     outlineVariant = Color(0xFFCAC4D0), // Light Gray
@@ -180,14 +191,14 @@ private fun buildDarkColorScheme(accent: AccentColorSet) = darkColorScheme(
     onPrimary = accent.onPrimaryDark,
     primaryContainer = accent.primaryContainerDark,
     onPrimaryContainer = accent.onPrimaryContainerDark,
-    secondary = Color(0xFFf97910), // Orange
-    onSecondary = Color(0xFF4E2600), // Dark Brown
-    secondaryContainer = Color(0xFF6F3800), // Brown
-    onSecondaryContainer = Color(0xFFFFE8D6), // Pale Orange
-    tertiary = Color(0xFF83D6B5), // Mint Green
-    onTertiary = Color(0xFF00382E), // Dark Teal
-    tertiaryContainer = Color(0xFF005143), // Teal
-    onTertiaryContainer = Color(0xFFA0F2D0), // Light Green
+    secondary = rotateHue(accent.primaryDark, 40f, 0.75f),
+    onSecondary = rotateHue(accent.primaryDark, 40f, 0.18f),
+    secondaryContainer = rotateHue(accent.primaryDark, 40f, 0.30f),
+    onSecondaryContainer = rotateHue(accent.primaryDark, 40f, 0.90f),
+    tertiary = rotateHue(accent.primaryDark, -40f, 0.72f),
+    onTertiary = rotateHue(accent.primaryDark, -40f, 0.16f),
+    tertiaryContainer = rotateHue(accent.primaryDark, -40f, 0.26f),
+    onTertiaryContainer = rotateHue(accent.primaryDark, -40f, 0.88f),
     error = Color(0xFFFFB4AB), // Light Red
     errorContainer = Color(0xFF93000A), // Dark Red
     onError = Color(0xFF690005), // Deep Red
@@ -196,7 +207,7 @@ private fun buildDarkColorScheme(accent: AccentColorSet) = darkColorScheme(
     onBackground = Color(0xFFE6E1E5), // Light Gray
     surface = Color(0xFF1C1B1F), // Near Black
     onSurface = Color(0xFFE6E1E5), // Light Gray
-    surfaceVariant = Color(0xFF49454F), // Dark Gray
+    surfaceVariant = rotateHue(accent.primaryDark, 0f, 0.24f),
     onSurfaceVariant = Color(0xFFCAC4D0), // Light Gray
     outline = Color(0xFF938F99), // Grayish Purple
     outlineVariant = Color(0xFF49454F), // Dark Gray

@@ -35,7 +35,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppDivider
-import com.v2ray.ang.ui.compose.colorFabActive
 import com.v2ray.ang.ui.compose.colorFabInactiveDark
 import com.v2ray.ang.ui.compose.colorFabInactiveLight
 import kotlinx.coroutines.delay
@@ -84,7 +83,7 @@ fun MainBottomBar(
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
                 .navigationBarsPadding(),
-            containerColor = if (isRunning) colorFabActive
+            containerColor = if (isRunning) MaterialTheme.colorScheme.primary
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
         ) {
