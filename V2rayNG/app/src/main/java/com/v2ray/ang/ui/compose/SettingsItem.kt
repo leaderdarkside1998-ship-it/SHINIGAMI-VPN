@@ -155,7 +155,12 @@ fun SettingsEditItem(
     )
 
     if (showDialog) {
-        var text by remember { mutableStateOf(value) }
+        // For multiline (comma-separated) values, edit them as one entry per line so the
+        // dialog matches the stacked top-to-bottom look of the settings row, instead of a
+        // single comma-separated line. Converted back to a comma-separated string on save.
+        var text by remember {
+            mutableStateOf(if (multiline) value.split(",").joinToString("\n") { s -> s.trim() } else value)
+        }
         InputDialog(
             title = title,
             fields = listOf(
@@ -168,7 +173,15 @@ fun SettingsEditItem(
             onFieldChange = { _, v -> text = v },
             confirmText = stringResource(R.string.action_ok),
             dismissText = stringResource(R.string.action_cancel),
-            onConfirm = { showDialog = false; onValueChanged(text) },
+            onConfirm = {
+                showDialog = false
+                val result = if (multiline) {
+                    text.split("\n").map { it.trim() }.filter { it.isNotEmpty() }.joinToString(",")
+                } else {
+                    text
+                }
+                onValueChanged(result)
+            },
             onDismiss = { showDialog = false }
         )
     }

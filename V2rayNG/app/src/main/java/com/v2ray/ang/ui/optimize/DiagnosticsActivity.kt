@@ -16,15 +16,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.v2ray.ang.R
-import com.v2ray.ang.core.DnsAutoEngine
-import com.v2ray.ang.core.DnsDiagnostics
 import com.v2ray.ang.core.OptimizeDiagnostics
 import com.v2ray.ang.ui.base.BaseComponentActivity
 import com.v2ray.ang.ui.compose.AppTopBar
@@ -43,7 +40,6 @@ class DiagnosticsActivity : BaseComponentActivity() {
         // Gaming and Boost run in the :daemon process, so they come from the published snapshots.
         val gaming by viewModel.gaming.collectAsStateWithLifecycle()
         val boost by viewModel.boost.collectAsStateWithLifecycle()
-        val dns by DnsAutoEngine.diagnostics.collectAsState()
 
         Scaffold(
             contentWindowInsets = WindowInsets(0),
@@ -67,10 +63,6 @@ class DiagnosticsActivity : BaseComponentActivity() {
 
                 item { SectionTitle("BOOST") }
                 items(boostRows(boost)) { DiagnosticRow(it.first, it.second) }
-                item { HorizontalDivider() }
-
-                item { SectionTitle("DNS ENGINE") }
-                items(dnsRows(dns)) { DiagnosticRow(it.first, it.second) }
             }
         }
     }
@@ -141,11 +133,3 @@ private fun boostRows(d: OptimizeDiagnostics): List<Pair<String, String>> = list
     "LAST CHECK" to formatTime(d.lastCheckMillis)
 )
 
-private fun dnsRows(d: DnsDiagnostics): List<Pair<String, String>> = listOf(
-    "DNS ENGINE" to "AUTO",
-    "CURRENT DNS" to (d.currentDns ?: NA),
-    "DNS RESPONSE" to formatMillis(d.dnsResponseMillis),
-    "SUCCESS RATE" to formatPercent(d.successRatePercent),
-    "DNS SCORE" to formatScore(d.dnsScore),
-    "LAST BENCHMARK" to formatTime(d.lastBenchmarkMillis)
-)

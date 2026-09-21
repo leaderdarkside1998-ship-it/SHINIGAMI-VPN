@@ -3,11 +3,7 @@ package com.v2ray.ang.ui.main
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,10 +17,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -76,42 +69,17 @@ fun MainDrawerContent(drawerState: DrawerState, onNavigate: (MainDestination) ->
                 .verticalScroll(drawerScrollState)
                 .verticalScrollbar(drawerScrollState)
         ) {
-            // SHINIGAMI VPN: wide banner image with the app name overlaid on a
-            // bottom scrim, instead of a small centered logo.
-            Box(
+            // SHINIGAMI VPN: wide banner image (the channel artwork). The app name
+            // is already part of the artwork itself, so no text overlay is drawn
+            // on top of it.
+            Image(
+                painter = painterResource(R.drawable.img_app_banner),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(150.dp)
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.img_app_banner),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color(0xCC001A19))
-                            )
-                        )
-                )
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.Start,
-                    verticalArrangement = Arrangement.Bottom
-                ) {
-                    Text(
-                        text = stringResource(R.string.app_name),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = Color.White
-                    )
-                }
-            }
+            )
             drawerItems.forEachIndexed { index, item ->
                 if (index == primaryDrawerItems.size) AppDivider()
                 NavigationDrawerItem(
