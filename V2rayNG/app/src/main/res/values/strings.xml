@@ -168,6 +168,14 @@
     <string name="title_gaming_mode">Gaming</string>
     <string name="summary_gaming_mode">Route the selected games through the lowest-ping server, with no delay</string>
     <string name="title_lock_gaming_route">Lock gaming route</string>
+    <string name="title_select_game">Select Game</string>
+    <string name="summary_select_game">Pick an installed game to launch it and reserve the whole tunnel for it alone. On a rooted device every other app also loses internet while the session is active; without root, other apps simply stop sharing the tunnel and keep using the phone\'s normal connection.</string>
+    <string name="toast_select_game_not_launchable">This app can\'t be opened directly</string>
+    <string name="label_game_exclusive_active">Exclusive session active: %1$s</string>
+    <string name="notification_game_exclusive_title">Exclusive mode: %1$s</string>
+    <string name="notification_game_exclusive_root">Every other app\'s internet is blocked (root)</string>
+    <string name="notification_game_exclusive_no_root">Only this game uses the tunnel; other apps use the normal connection</string>
+    <string name="notification_action_end_game_exclusive">End</string>
     <string name="title_boost_mode">BOOST</string>
     <string name="summary_boost_mode">Keep the selected apps on the fastest server when their speed drops</string>
     <string name="title_diagnostics">Diagnostics</string>
@@ -316,7 +324,6 @@
     <string name="title_pref_ui_mode_night">UI mode settings</string>
     <string name="title_pref_dynamic_color">Enable dynamic color</string>
     <string name="summary_pref_dynamic_color">Only works on Android 12+ devices</string>
-    <string name="title_pref_app_accent_theme">App theme color</string>
     <string name="title_pref_custom_accent_color">Custom color</string>
     <string name="summary_pref_custom_accent_color">Pick any color for the app accent</string>
     <string name="title_pref_use_hev_tunnel">Use Hev TUN</string>
@@ -503,14 +510,6 @@
         <item>Follow system</item>
         <item>Light</item>
         <item>Dark</item>
-    </string-array>
-
-    <string-array name="app_accent_theme">
-        <item>Turquoise (default)</item>
-        <item>Blue</item>
-        <item>Purple</item>
-        <item>Red</item>
-        <item>Orange (classic)</item>
     </string-array>
 
     <string name="routing_preset_china_whitelist">China Whitelist</string>

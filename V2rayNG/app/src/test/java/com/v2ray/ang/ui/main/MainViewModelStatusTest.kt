@@ -45,4 +45,42 @@ class MainViewModelStatusTest {
             MainViewModel.runningStatus(connecting, wasRunning = false, running = false, clearTestingText = false)
         )
     }
+
+    @Test
+    fun theTimerFollowsTheDaemonStartTimeAcrossReopeningTheApp() {
+        // A fresh ViewModel (app reopened) learns the running session from the daemon.
+        assertEquals(
+            1_000L,
+            MainViewModel.connectedSince(current = null, wasRunning = false, running = true, daemonStartedAtMillis = 1_000L, nowMillis = 9_000L)
+        )
+        // A repeated signal keeps the same start.
+        assertEquals(
+            1_000L,
+            MainViewModel.connectedSince(current = 1_000L, wasRunning = true, running = true, daemonStartedAtMillis = 1_000L, nowMillis = 9_000L)
+        )
+    }
+
+    @Test
+    fun theTimerFallsBackToTheLocalClockOnlyWithoutADaemonTime() {
+        assertEquals(
+            9_000L,
+            MainViewModel.connectedSince(current = null, wasRunning = false, running = true, daemonStartedAtMillis = null, nowMillis = 9_000L)
+        )
+        assertEquals(
+            2_000L,
+            MainViewModel.connectedSince(current = 2_000L, wasRunning = true, running = true, daemonStartedAtMillis = null, nowMillis = 9_000L)
+        )
+        assertEquals(
+            9_000L,
+            MainViewModel.connectedSince(current = null, wasRunning = false, running = true, daemonStartedAtMillis = 0L, nowMillis = 9_000L)
+        )
+    }
+
+    @Test
+    fun theTimerClearsWhenTheServiceStops() {
+        assertEquals(
+            null,
+            MainViewModel.connectedSince(current = 1_000L, wasRunning = true, running = false, daemonStartedAtMillis = null, nowMillis = 9_000L)
+        )
+    }
 }

@@ -137,6 +137,9 @@
             android:name=".ui.optimize.GamingActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.optimize.SelectGameActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.optimize.BoostActivity"
             android:exported="false" />
         <activity
@@ -300,6 +303,9 @@
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>
+        <receiver
+            android:name=".receiver.GameExclusiveReceiver"
+            android:exported="false" />
 
         <service
             android:name=".service.QSTileService"

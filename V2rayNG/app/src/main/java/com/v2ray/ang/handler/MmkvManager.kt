@@ -44,6 +44,7 @@ object MmkvManager {
     private const val ID_SUB = "SUB"
     private const val ID_ASSET = "ASSET"
     private const val ID_SETTING = "SETTING"
+    private const val ID_DIAGNOSTICS = "DIAGNOSTICS"
     private const val KEY_SELECTED_SERVER = "SELECTED_SERVER"
     private const val KEY_ANG_CONFIGS = "ANG_CONFIGS"
     private const val KEY_SUB_SERVER_PREFIX = "SUB_SERVERS_"
@@ -75,6 +76,7 @@ object MmkvManager {
     private val subStorage by lazy { MMKV.mmkvWithID(ID_SUB, MMKV.MULTI_PROCESS_MODE) }
     private val assetStorage by lazy { MMKV.mmkvWithID(ID_ASSET, MMKV.MULTI_PROCESS_MODE) }
     private val settingsStorage by lazy { MMKV.mmkvWithID(ID_SETTING, MMKV.MULTI_PROCESS_MODE) }
+    private val diagnosticsStorage by lazy { MMKV.mmkvWithID(ID_DIAGNOSTICS, MMKV.MULTI_PROCESS_MODE) }
 
     private inline fun <T> withProfileIndexLock(block: () -> T): T {
         return synchronized(mainStorage) {
@@ -800,6 +802,44 @@ object MmkvManager {
             encodeSettings(PREF_ROUTING_RULESET, "")
         else
             encodeSettings(PREF_ROUTING_RULESET, JsonUtil.toJson(rulesetList))
+    }
+
+    //endregion
+
+    //region diagnostics
+
+    /**
+     * Stores the latest Gaming/Boost engine snapshot. The engines run in the `:daemon` process
+     * while the Diagnostics screen lives in the main process, so a plain in-memory flow is never
+     * shared between them; this multi-process store is how the screen sees what was measured.
+     * Kept apart from the settings store so transient measurements are never mixed into user
+     * settings.
+     *
+     * @param key The snapshot key.
+     * @param json The serialized snapshot.
+     * @return Whether the encoding was successful.
+     */
+    fun encodeDiagnosticsSnapshot(key: String, json: String): Boolean {
+        return diagnosticsStorage.encode(key, json)
+    }
+
+    /**
+     * Decodes the latest engine snapshot.
+     *
+     * @param key The snapshot key.
+     * @return The serialized snapshot, or null when no engine has published one.
+     */
+    fun decodeDiagnosticsSnapshot(key: String): String? {
+        return diagnosticsStorage.decodeString(key)
+    }
+
+    /**
+     * Removes an engine snapshot, e.g. when the engine stops.
+     *
+     * @param key The snapshot key.
+     */
+    fun removeDiagnosticsSnapshot(key: String) {
+        diagnosticsStorage.removeValueForKey(key)
     }
 
     //endregion

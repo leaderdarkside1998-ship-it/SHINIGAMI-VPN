@@ -5,6 +5,7 @@ import com.v2ray.ang.dto.RealPingEvent
 import com.v2ray.ang.service.RealPingWorkerService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 import kotlin.math.sqrt
 
@@ -26,6 +27,9 @@ data class RouteMetrics(
 }
 
 object StabilityMeter {
+
+    /** Upper bound for one probe, so a probe that never reports back can't freeze the engine loop. */
+    private const val PROBE_TIMEOUT_MILLIS = 20_000L
 
     /**
      * Sends [samples] real, individually-timed probes to [guid] (spaced [spacingMillis] apart so
@@ -74,14 +78,20 @@ object StabilityMeter {
     }
 
     private suspend fun singlePing(context: Context, guid: String): Long =
-        suspendCancellableCoroutine { cont ->
-            var worker: RealPingWorkerService? = null
-            worker = RealPingWorkerService(context, listOf(guid), onlyTcp = false) { event ->
-                if (event is RealPingEvent.Result && cont.isActive) {
-                    cont.resume(event.delayMillis)
+        withTimeoutOrNull(PROBE_TIMEOUT_MILLIS) {
+            suspendCancellableCoroutine<Long> { cont ->
+                var worker: RealPingWorkerService? = null
+                worker = RealPingWorkerService(context, listOf(guid), onlyTcp = false) { event ->
+                    when (event) {
+                        is RealPingEvent.Result -> if (cont.isActive) cont.resume(event.delayMillis)
+                        // The worker swallows a probe that throws without sending a Result, so
+                        // Finish is the only signal that this probe is over: count it as failed.
+                        is RealPingEvent.Finish -> if (cont.isActive) cont.resume(-1L)
+                        else -> Unit
+                    }
                 }
+                cont.invokeOnCancellation { worker?.cancel() }
+                worker.start()
             }
-            cont.invokeOnCancellation { worker?.cancel() }
-            worker.start()
-        }
+        } ?: -1L
 }

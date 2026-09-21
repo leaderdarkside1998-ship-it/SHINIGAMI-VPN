@@ -177,14 +177,6 @@
         <item>2</item>
     </string-array>
 
-    <string-array name="app_accent_theme_value" translatable="false">
-        <item>Turquoise</item>
-        <item>Blue</item>
-        <item>Purple</item>
-        <item>Red</item>
-        <item>Orange</item>
-    </string-array>
-
     <string-array name="outbound_tag" translatable="false">
         <item>proxy</item>
         <item>direct</item>

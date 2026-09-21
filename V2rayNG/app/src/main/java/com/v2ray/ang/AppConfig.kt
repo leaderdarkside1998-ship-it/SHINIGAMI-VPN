@@ -68,6 +68,20 @@ object AppConfig {
     const val PREF_GAMING_LOCKED_GUID = "pref_gaming_locked_guid"
     const val PREF_BOOST_ENABLED = "pref_boost_enabled"
     const val PREF_BOOST_APPS_SET = "pref_boost_apps_set"
+
+    /** Snapshot keys the `:daemon` process publishes so the Diagnostics screen can read the engines. */
+    const val DIAGNOSTICS_GAMING = "diagnostics_gaming"
+    const val DIAGNOSTICS_BOOST = "diagnostics_boost"
+
+    /** "Select Game" exclusive-network session (single manually chosen game). */
+    const val PREF_GAME_EXCLUSIVE_MODE = "pref_game_exclusive_mode"
+    const val PREF_GAME_EXCLUSIVE_PACKAGE = "pref_game_exclusive_package"
+    const val PREF_GAME_EXCLUSIVE_BLOCKED_UIDS = "pref_game_exclusive_blocked_uids"
+    // Snapshot of the per-app-proxy settings that were active before an exclusive session
+    // started, restored when the session ends.
+    const val PREF_GAME_EXCLUSIVE_SAVED_PER_APP_PROXY = "pref_game_exclusive_saved_per_app_proxy"
+    const val PREF_GAME_EXCLUSIVE_SAVED_PER_APP_PROXY_SET = "pref_game_exclusive_saved_per_app_proxy_set"
+    const val PREF_GAME_EXCLUSIVE_SAVED_BYPASS_APPS = "pref_game_exclusive_saved_bypass_apps"
     const val PREF_AUTO_DNS_ENABLED = "pref_auto_dns_enabled"
     const val PREF_AUTO_DNS_PRE_BENCHMARK_VALUE = "pref_auto_dns_pre_benchmark_value"
     const val PREF_IPV6_ENABLED = "pref_ipv6_enabled"
@@ -158,7 +172,7 @@ object AppConfig {
     const val IP_API_URL = "https://api.ip.sb/geoip"
 
     /** DNS server addresses. */
-    const val DNS_PROXY = "1.1.1.1,8.8.8.8"
+    const val DNS_PROXY = "223.5.5.5,1.1.1.1,8.8.8.8"
     const val DNS_DIRECT = "223.5.5.5,223.6.6.6,1.1.1.1,8.8.8.8"
     const val DNS_VPN = "1.1.1.1"
     const val GEOSITE_PRIVATE = "geosite:private"

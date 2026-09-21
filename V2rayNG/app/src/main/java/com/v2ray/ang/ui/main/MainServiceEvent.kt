@@ -4,9 +4,9 @@ import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.RealPingResult
 
 sealed class MainServiceEvent {
-    data object StateRunning : MainServiceEvent()
+    data class StateRunning(val startedAtMillis: Long? = null) : MainServiceEvent()
     data object StateNotRunning : MainServiceEvent()
-    data object StateStartSuccess : MainServiceEvent()
+    data class StateStartSuccess(val startedAtMillis: Long? = null) : MainServiceEvent()
     data class StateStartFailure(val message: String) : MainServiceEvent()
     data class StateConnecting(val message: String) : MainServiceEvent()
     data object StateStopSuccess : MainServiceEvent()

@@ -127,11 +127,11 @@ class MainViewModel(
 
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
-            MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false)
+            is MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false, startedAtMillis = event.startedAtMillis)
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
-            MainServiceEvent.StateStartSuccess -> {
+            is MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
-                updateRunningState(true)
+                updateRunningState(true, startedAtMillis = event.startedAtMillis)
             }
 
             is MainServiceEvent.StateStartFailure -> {
@@ -987,7 +987,7 @@ class MainViewModel(
     }
 
     // ---------- Running state ----------
-    private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true) {
+    private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true, startedAtMillis: Long? = null) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
         _uiState.update { state ->
             val wasRunning = state.isRunning
@@ -995,11 +995,13 @@ class MainViewModel(
                 isRunning = running,
                 isTesting = testRequests.isTesting,
                 status = runningStatus(state.status, state.isRunning, running, clearTestingText),
-                connectedSinceMillis = when {
-                    running && !wasRunning -> System.currentTimeMillis()
-                    !running -> null
-                    else -> state.connectedSinceMillis
-                }
+                connectedSinceMillis = connectedSince(
+                    current = state.connectedSinceMillis,
+                    wasRunning = wasRunning,
+                    running = running,
+                    daemonStartedAtMillis = startedAtMillis,
+                    nowMillis = System.currentTimeMillis()
+                )
             )
         }
     }
@@ -1031,6 +1033,24 @@ class MainViewModel(
         ): MainStatus =
             if (!clearTestingText && wasRunning == running && current !is MainStatus.Connecting) current
             else if (running) MainStatus.Connected else MainStatus.Disconnected
+
+        /**
+         * The session start shown by the timer. The daemon's own start time wins so reopening the
+         * app while the server keeps running continues the count instead of restarting it; the
+         * local clock is only a fallback when the daemon reported none.
+         */
+        internal fun connectedSince(
+            current: Long?,
+            wasRunning: Boolean,
+            running: Boolean,
+            daemonStartedAtMillis: Long?,
+            nowMillis: Long,
+        ): Long? = when {
+            !running -> null
+            daemonStartedAtMillis != null && daemonStartedAtMillis > 0L -> daemonStartedAtMillis
+            !wasRunning -> nowMillis
+            else -> current
+        }
     }
 
     // ---------- Factory ----------

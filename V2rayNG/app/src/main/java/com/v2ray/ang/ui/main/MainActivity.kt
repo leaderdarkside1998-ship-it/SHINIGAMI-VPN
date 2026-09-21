@@ -29,6 +29,7 @@ import com.v2ray.ang.ui.base.HelperBaseComponentActivity
 import com.v2ray.ang.ui.optimize.BoostActivity
 import com.v2ray.ang.ui.optimize.DiagnosticsActivity
 import com.v2ray.ang.ui.optimize.GamingActivity
+import com.v2ray.ang.ui.optimize.SelectGameActivity
 import com.v2ray.ang.ui.perappproxy.PerAppProxyActivity
 import com.v2ray.ang.ui.routing.RoutingSettingActivity
 import com.v2ray.ang.ui.server.ProfileEditorResult
@@ -142,6 +143,7 @@ class MainActivity : HelperBaseComponentActivity() {
             MainDestination.Subscriptions -> Intent(this, SubSettingActivity::class.java)
             MainDestination.PerAppProxy -> Intent(this, PerAppProxyActivity::class.java)
             MainDestination.Gaming -> Intent(this, GamingActivity::class.java)
+            MainDestination.SelectGame -> Intent(this, SelectGameActivity::class.java)
             MainDestination.Boost -> Intent(this, BoostActivity::class.java)
             MainDestination.Diagnostics -> Intent(this, DiagnosticsActivity::class.java)
             MainDestination.Routing -> Intent(this, RoutingSettingActivity::class.java)

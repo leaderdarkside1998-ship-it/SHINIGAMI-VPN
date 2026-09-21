@@ -631,7 +631,9 @@ object AngConfigManager {
         val subItem = SubscriptionItem()
         subItem.remarks = uri.fragment ?: "import sub"
         subItem.url = url
-        MmkvManager.encodeSubscription("", subItem)
+        val subId = Utils.getUuid()
+        MmkvManager.encodeSubscription(subId, subItem)
+        SubscriptionUpdater.syncOne(subId = subId)
         return 1
     }
 

@@ -50,7 +50,6 @@ import com.v2ray.ang.ui.compose.SettingsEditItem
 import com.v2ray.ang.ui.compose.SettingsListItem
 import com.v2ray.ang.ui.compose.SettingsMenuItem
 import com.v2ray.ang.ui.compose.SettingsSwitchItem
-import com.v2ray.ang.ui.compose.AppAccentTheme
 import com.v2ray.ang.ui.compose.ColorPickerDialog
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -168,10 +167,6 @@ fun SettingsScreen(
     }
     var uiModeNight by rememberMmkvString(AppConfig.PREF_UI_MODE_NIGHT, "0")
     var dynamicColor by rememberMmkvBool(AppConfig.PREF_DYNAMIC_COLOR, false)
-    var accentThemeKey by rememberMmkvString(
-        AppConfig.PREF_APP_ACCENT_THEME,
-        AppAccentTheme.Turquoise.name
-    )
 
     var ipv6Enabled by rememberMmkvBool(AppConfig.PREF_IPV6_ENABLED, false)
     var preferIpv6 by rememberMmkvBool(AppConfig.PREF_PREFER_IPV6, false)
@@ -206,8 +201,6 @@ fun SettingsScreen(
     val languageValues = stringArrayResource(R.array.language_select_value).toList()
     val uiModeNightEntries = stringArrayResource(R.array.ui_mode_night).toList()
     val uiModeNightValues = stringArrayResource(R.array.ui_mode_night_value).toList()
-    val accentThemeEntries = stringArrayResource(R.array.app_accent_theme).toList()
-    val accentThemeValues = stringArrayResource(R.array.app_accent_theme_value).toList()
     val bypassLanEntries = stringArrayResource(R.array.vpn_bypass_lan).toList()
     val bypassLanValues = stringArrayResource(R.array.vpn_bypass_lan_value).toList()
     val interfaceAddrEntries = stringArrayResource(R.array.vpn_interface_address).toList()
@@ -288,17 +281,6 @@ fun SettingsScreen(
                     onCheckedChange = {
                         dynamicColor = it
                         ThemeManager.setDynamicColorEnabled(it)
-                    }
-                )
-                SettingsListItem(
-                    title = stringResource(R.string.title_pref_app_accent_theme),
-                    entries = accentThemeEntries,
-                    values = accentThemeValues,
-                    selectedValue = accentThemeKey,
-                    enabled = !(dynamicColor && dynamicColorSupported),
-                    onSelected = {
-                        accentThemeKey = it
-                        ThemeManager.setAccentTheme(AppAccentTheme.fromKey(it))
                     }
                 )
                 val useCustomAccent by ThemeManager.useCustomAccent.collectAsStateWithLifecycle()

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
@@ -22,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
@@ -242,6 +244,15 @@ val toastInfoBg = Color(0xB33F51B5) // Indigo Blue
 val toastIconCircleBg = Color(0x33FFFFFF) // Semi-transparent White
 val toastTextColor = Color.White // White
 
+// Slightly smaller, airier body text app-wide for a lighter, more refined look.
+private val AppTypography: Typography = Typography().let { d ->
+    d.copy(
+        bodyLarge = d.bodyLarge.copy(fontSize = 15.sp, lineHeight = 22.sp, letterSpacing = 0.1.sp),
+        bodyMedium = d.bodyMedium.copy(fontSize = 13.sp, lineHeight = 19.sp, letterSpacing = 0.1.sp),
+        bodySmall = d.bodySmall.copy(fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.2.sp),
+    )
+}
+
 object ThemeManager {
     private val _themeMode = MutableStateFlow(
         MmkvManager.decodeSettingsString(AppConfig.PREF_UI_MODE_NIGHT, "0") ?: "0"
@@ -365,7 +376,8 @@ fun AppTheme(
         LocalAppSnackbar provides snackbarController
     ) {
         MaterialTheme(
-            colorScheme = colorScheme
+            colorScheme = colorScheme,
+            typography = AppTypography
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AppSnackbarBridge(controller = snackbarController)

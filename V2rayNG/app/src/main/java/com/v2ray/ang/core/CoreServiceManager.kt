@@ -71,6 +71,16 @@ object CoreServiceManager {
     @Volatile
     private var isReloading = false
 
+    /**
+     * Wall-clock time the current session started, kept by the daemon (the only authority on
+     * whether the core runs) so a UI that reconnects can show the real elapsed time. Survives a
+     * reload, cleared on stop. 0 means no session.
+     */
+    @Volatile
+    private var startedAtMillis = 0L
+
+    private fun startedAtContent(): String = startedAtMillis.takeIf { it > 0L }?.toString().orEmpty()
+
     /** Tun descriptor the core was started with, null in the proxy only and root run modes. */
     private var currentVpnInterface: ParcelFileDescriptor? = null
 
@@ -229,10 +239,13 @@ object CoreServiceManager {
             else -> {}
         }
 
+        if (!isReload || startedAtMillis == 0L) {
+            startedAtMillis = System.currentTimeMillis()
+        }
         if (config.configType == EConfigType.AETHER) {
             announceAetherWarmUp(service, guid, isReload)
         } else if (!isReload) {
-            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, "")
+            MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, startedAtContent())
         }
         NotificationManager.startSpeedNotification()
         GamingEngine.start(service, config.subscriptionId)
@@ -249,7 +262,7 @@ object CoreServiceManager {
      */
     private fun announceAetherWarmUp(service: Service, guid: String, isReload: Boolean) {
         val connecting = service.getString(R.string.aether_core_connecting)
-        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_RUNNING, "")
+        MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_RUNNING, startedAtContent())
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_CONNECTING, connecting)
         NotificationManager.setStatusLine(connecting)
         aetherWarmUpJob = aetherScope.launch {
@@ -264,7 +277,7 @@ object CoreServiceManager {
                 AetherCoreManager.WarmUpOutcome.LISTENING -> {
                     NotificationManager.setStatusLine(null)
                     val ready = if (isReload) AppConfig.MSG_STATE_RUNNING else AppConfig.MSG_STATE_START_SUCCESS
-                    MessageHelper.sendMsg2UI(service, ready, "")
+                    MessageHelper.sendMsg2UI(service, ready, startedAtContent())
                 }
             }
         }
@@ -329,6 +342,7 @@ object CoreServiceManager {
             browserDialer = null
         }
 
+        startedAtMillis = 0L
         MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_STOP_SUCCESS, "")
         NotificationManager.cancelNotification()
         GamingEngine.stop()
@@ -601,7 +615,7 @@ object CoreServiceManager {
             when (intent?.getIntExtra("key", 0)) {
                 AppConfig.MSG_REGISTER_CLIENT -> {
                     if (isRunning()) {
-                        MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, "")
+                        MessageHelper.sendMsg2UI(serviceControl.getService(), AppConfig.MSG_STATE_RUNNING, startedAtContent())
                         if (isAetherWarmingUp()) {
                             val service = serviceControl.getService()
                             MessageHelper.sendMsg2UI(

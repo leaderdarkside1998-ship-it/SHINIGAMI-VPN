@@ -49,9 +49,13 @@ class MainRepository(
             val safeIntent = intent ?: return
             val requestId = safeIntent.getStringExtra(MessageHelper.EXTRA_REQUEST_ID).orEmpty()
             val event = when (safeIntent.getIntExtra("key", 0)) {
-                AppConfig.MSG_STATE_RUNNING -> MainServiceEvent.StateRunning
+                AppConfig.MSG_STATE_RUNNING -> MainServiceEvent.StateRunning(
+                    safeIntent.getStringExtra("content")?.toLongOrNull()
+                )
                 AppConfig.MSG_STATE_NOT_RUNNING -> MainServiceEvent.StateNotRunning
-                AppConfig.MSG_STATE_START_SUCCESS -> MainServiceEvent.StateStartSuccess
+                AppConfig.MSG_STATE_START_SUCCESS -> MainServiceEvent.StateStartSuccess(
+                    safeIntent.getStringExtra("content")?.toLongOrNull()
+                )
                 AppConfig.MSG_STATE_START_FAILURE -> MainServiceEvent.StateStartFailure(safeIntent.getStringExtra("content").orEmpty())
                 AppConfig.MSG_STATE_CONNECTING -> MainServiceEvent.StateConnecting(safeIntent.getStringExtra("content").orEmpty())
 

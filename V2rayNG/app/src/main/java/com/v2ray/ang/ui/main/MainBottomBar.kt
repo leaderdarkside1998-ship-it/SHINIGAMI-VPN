@@ -1,18 +1,11 @@
 package com.v2ray.ang.ui.main
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.WindowInsets
@@ -39,8 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -82,36 +73,20 @@ fun MainBottomBar(
                         contentDescription = displayText
                     }
                 )
-                ShinigamiFallingCard()
             }
         }
         if (isRunning) {
-            // NetMode-style controls: while running, a round "test connection" button sits above a
-            // red pill that holds the stop square and the live start-time counter. The pill takes
-            // the place of the start button, so tapping it stops the service.
+            // While running, a pill in the accent color that holds the stop square and the live start-time counter
+            // takes the place of the start button, so tapping it stops the service. (The round
+            // "test connection" button was removed; the bottom bar row still tests on tap.)
             Column(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(end = ControlsEndPadding)
-                    .offset(y = (-104).dp)
+                    .offset(y = (-24).dp)
                     .navigationBarsPadding(),
                 horizontalAlignment = Alignment.End
             ) {
-                FloatingActionButton(
-                    onClick = { onAction(MainAction.TestCurrentServer) },
-                    modifier = Modifier.size(ControlFabSize),
-                    shape = CircleShape,
-                    containerColor = ControlRed,
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_show_chart_24dp),
-                        contentDescription = stringResource(R.string.connection_test_pending),
-                        tint = Color.White,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-                Spacer(Modifier.height(24.dp))
                 StopTimerPill(
                     connectedSinceMillis = connectedSinceMillis,
                     onClick = { onAction(MainAction.ToggleService) }
@@ -127,13 +102,13 @@ fun MainBottomBar(
                     .navigationBarsPadding()
                     .size(ControlFabSize),
                 shape = CircleShape,
-                containerColor = ControlRed,
-                contentColor = Color.White
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_play_24dp),
                     contentDescription = stringResource(R.string.acc_start),
-                    tint = Color.White,
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -141,22 +116,23 @@ fun MainBottomBar(
     }
 }
 
-private val ControlRed = Color(0xFFF44336)
 private val ControlFabSize = 56.dp
 private val ControlsEndPadding = 16.dp
 
-/** Red pill: white stop square + "HH:MM:SS" counter that starts at 00:00:00 when the service starts. */
+/** Pill in the app accent color: stop square + "HH:MM:SS" session counter (follows the theme color). */
 @Composable
 private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
     // Fall back to the moment the pill first appeared if the service has not reported a start time.
     val fallbackStart = remember { System.currentTimeMillis() }
     val since = connectedSinceMillis ?: fallbackStart
     val stopDescription = stringResource(R.string.acc_stop)
+    val pillColor = MaterialTheme.colorScheme.primary
+    val onPillColor = MaterialTheme.colorScheme.onPrimary
     Row(
         modifier = Modifier
             .height(48.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(ControlRed)
+            .background(pillColor)
             .clickable(onClick = onClick)
             .padding(horizontal = 20.dp)
             .semantics { contentDescription = stopDescription },
@@ -167,48 +143,15 @@ private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
             modifier = Modifier
                 .size(15.dp)
                 .clip(RoundedCornerShape(2.dp))
-                .background(Color.White)
+                .background(onPillColor)
         )
-        ConnectionTimerText(connectedSinceMillis = since)
-    }
-}
-
-/** Small clipped card with the "死神" characters continuously sliding from top to bottom and
- * looping, tinted with the current accent color -- shown in the bottom bar's ping-test row. */
-@Composable
-private fun ShinigamiFallingCard() {
-    val transition = rememberInfiniteTransition(label = "shinigami_text_fall")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shinigami_text_fall_progress"
-    )
-    Box(
-        modifier = Modifier
-            .size(width = 44.dp, height = 28.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh),
-        contentAlignment = Alignment.Center
-    ) {
-        val travelPx = with(LocalDensity.current) { 40.dp.toPx() }
-        Text(
-            text = "死神",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.graphicsLayer {
-                translationY = -travelPx / 2f + progress * travelPx
-            }
-        )
+        ConnectionTimerText(connectedSinceMillis = since, color = onPillColor)
     }
 }
 
 /** Live "HH:MM:SS" elapsed since [connectedSinceMillis], ticking every second. */
 @Composable
-private fun ConnectionTimerText(connectedSinceMillis: Long, modifier: Modifier = Modifier) {
+private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifier: Modifier = Modifier) {
     var elapsedSeconds by remember(connectedSinceMillis) {
         mutableLongStateOf(((System.currentTimeMillis() - connectedSinceMillis) / 1000).coerceAtLeast(0))
     }
@@ -223,7 +166,7 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, modifier: Modifier =
     val sec = elapsedSeconds % 60
     Text(
         text = "%02d:%02d:%02d".format(h, m, sec),
-        color = Color.White,
+        color = color,
         fontSize = 16.sp,
         letterSpacing = 0.5.sp,
         maxLines = 1,

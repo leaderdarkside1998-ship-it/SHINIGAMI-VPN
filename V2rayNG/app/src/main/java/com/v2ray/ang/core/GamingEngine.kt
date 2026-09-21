@@ -67,7 +67,7 @@ object GamingEngine {
                         LogUtil.e(AppConfig.TAG, "GamingEngine tick failed", e)
                     }
                 } else {
-                    _diagnostics.value = OptimizeDiagnostics(mode = "GAMING", label = "N/A", status = "INACTIVE")
+                    emit(OptimizeDiagnostics.idle("GAMING", serviceRunning = true))
                 }
                 delay(CHECK_INTERVAL_MILLIS)
             }
@@ -77,6 +77,10 @@ object GamingEngine {
     fun stop() {
         job?.cancel()
         job = null
+        // No engine is running any more: drop the snapshot so the Diagnostics screen (main
+        // process) stops showing the last measurement as if it were current.
+        _diagnostics.value = OptimizeDiagnostics.idle("GAMING")
+        MmkvManager.removeDiagnosticsSnapshot(AppConfig.DIAGNOSTICS_GAMING)
         // Note: pendingRollback deliberately survives stop(), since switchTo() itself triggers a
         // core restart (stop -> start) via SettingsChangeManager.makeRestartService(); clearing it
         // here would erase the rollback check before the next tick() ever gets to use it.
@@ -93,7 +97,7 @@ object GamingEngine {
     private suspend fun tick(context: Context, groupId: String) {
         val currentGuid = MmkvManager.getSelectServer()
         if (currentGuid.isNullOrEmpty()) {
-            _diagnostics.value = OptimizeDiagnostics(mode = "GAMING", label = "N/A", status = "INACTIVE", modeEnabled = true, vpnActive = false)
+            emit(OptimizeDiagnostics.idle("GAMING").copy(modeEnabled = true))
             return
         }
         val config = MmkvManager.decodeServerConfig(currentGuid)
@@ -102,10 +106,19 @@ object GamingEngine {
         val candidatePool = turkeyGuids.ifEmpty { allGuids }
         val usingTurkeyPool = turkeyGuids.isNotEmpty()
 
-        val metrics = StabilityMeter.measure(context, currentGuid, SAMPLES)
-        val locked = isRouteLocked()
         val selectedGames = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_GAMING_APPS_SET)?.toList() ?: emptyList()
         val label = if (selectedGames.isEmpty()) "N/A" else selectedGames.joinToString(", ")
+        if (_diagnostics.value.status == "INACTIVE") {
+            // First check since the engine (re)started: say so instead of showing "N/A" for the
+            // whole time the probes take.
+            emit(
+                OptimizeDiagnostics.idle("GAMING", serviceRunning = true)
+                    .copy(status = "CHECKING", label = label, modeEnabled = true, selectedAppCount = selectedGames.size)
+            )
+        }
+
+        val metrics = StabilityMeter.measure(context, currentGuid, SAMPLES)
+        val locked = isRouteLocked()
 
         publish(currentGuid, config, metrics, locked, label, selectedGames.size)
 
@@ -147,6 +160,8 @@ object GamingEngine {
                 bestScore = candidateMetrics.stabilityScore
                 bestGuid = guid
             }
+            // A long candidate scan must not let the published snapshot age out.
+            emit(_diagnostics.value)
         }
         badStreak = 0
         if (bestGuid != null && metrics.isMeasurable && bestScore - metrics.stabilityScore >= MIN_IMPROVEMENT_SCORE) {
@@ -183,7 +198,7 @@ object GamingEngine {
         val perAppProxySetNotEmpty = !MmkvManager.decodeSettingsStringSet(AppConfig.PREF_PER_APP_PROXY_SET).isNullOrEmpty()
         val perAppRoutingActive = selectedAppCount > 0 && perAppProxyEnabled && perAppProxySetNotEmpty
 
-        _diagnostics.value = OptimizeDiagnostics(
+        emit(OptimizeDiagnostics(
             mode = "GAMING",
             label = label,
             routeGuid = guid,
@@ -202,6 +217,11 @@ object GamingEngine {
             selectedAppCount = selectedAppCount,
             vpnActive = true,
             perAppRoutingActive = perAppRoutingActive
-        )
+        ))
+    }
+
+    /** Updates the in-process value and publishes it for the UI process. */
+    private fun emit(snapshot: OptimizeDiagnostics) {
+        _diagnostics.value = OptimizeDiagnostics.publish(AppConfig.DIAGNOSTICS_GAMING, snapshot)
     }
 }

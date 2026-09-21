@@ -21,6 +21,7 @@ object AppLocaleManager {
      * Migrates the existing MMKV language preference and restores it before the first activity.
      */
     fun initialize(context: Context) {
+        applyDefaultLanguageOnFreshInstall()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             Api33.prepareMigration(context)
         } else {
@@ -64,6 +65,20 @@ object AppLocaleManager {
         val configuration = Configuration(context.resources.configuration)
         ConfigurationCompat.setLocales(configuration, language.toLocaleList())
         return context.createConfigurationContext(configuration)
+    }
+
+    /**
+     * SHINIGAMI VPN: a fresh install (no language ever stored) starts in Persian. Seeding the legacy
+     * preference lets the existing migration below apply it as the app locale. Existing users keep
+     * whatever they already have (including "auto"), and a locale set through Android's per-app
+     * language settings still wins on API 33+.
+     */
+    private fun applyDefaultLanguageOnFreshInstall() {
+        if (MmkvManager.decodeSettingsString(AppConfig.PREF_LANGUAGE) == null &&
+            !MmkvManager.decodeSettingsBool(AppConfig.PREF_APP_LOCALE_MIGRATED, false)
+        ) {
+            MmkvManager.encodeSettings(AppConfig.PREF_LANGUAGE, Language.PERSIAN.code)
+        }
     }
 
     private fun initializeCompat(context: Context) {

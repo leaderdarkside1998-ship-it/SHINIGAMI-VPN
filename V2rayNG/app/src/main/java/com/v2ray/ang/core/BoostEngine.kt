@@ -64,7 +64,7 @@ object BoostEngine {
                         LogUtil.e(AppConfig.TAG, "BoostEngine tick failed", e)
                     }
                 } else {
-                    _diagnostics.value = OptimizeDiagnostics(mode = "BOOST", label = "N/A", status = "INACTIVE")
+                    emit(OptimizeDiagnostics.idle("BOOST", serviceRunning = true))
                 }
                 delay(CHECK_INTERVAL_MILLIS)
             }
@@ -74,6 +74,10 @@ object BoostEngine {
     fun stop() {
         job?.cancel()
         job = null
+        // No engine is running any more: drop the snapshot so the Diagnostics screen (main
+        // process) stops showing the last measurement as if it were current.
+        _diagnostics.value = OptimizeDiagnostics.idle("BOOST")
+        MmkvManager.removeDiagnosticsSnapshot(AppConfig.DIAGNOSTICS_BOOST)
         // pendingRollback intentionally survives stop() -- see GamingEngine for why.
     }
 
@@ -83,12 +87,20 @@ object BoostEngine {
         val currentGuid = MmkvManager.getSelectServer()
         val selectedApps = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_BOOST_APPS_SET)?.toList() ?: emptyList()
         if (currentGuid.isNullOrEmpty() || selectedApps.isEmpty()) {
-            _diagnostics.value = OptimizeDiagnostics(mode = "BOOST", label = "N/A", status = "INACTIVE")
+            emit(OptimizeDiagnostics.idle("BOOST", serviceRunning = true).copy(modeEnabled = true))
             return
         }
         val config = MmkvManager.decodeServerConfig(currentGuid)
         val allGuids = MmkvManager.decodeServerList(groupId)
         val label = selectedApps.joinToString(", ")
+        if (_diagnostics.value.status == "INACTIVE") {
+            // First check since the engine (re)started: say so instead of showing "N/A" for the
+            // whole time the probes take.
+            emit(
+                OptimizeDiagnostics.idle("BOOST", serviceRunning = true)
+                    .copy(status = "CHECKING", label = label, modeEnabled = true, selectedAppCount = selectedApps.size)
+            )
+        }
 
         val metrics = StabilityMeter.measure(context, currentGuid, SAMPLES)
         publish(currentGuid, config, metrics, label)
@@ -118,6 +130,8 @@ object BoostEngine {
                 bestScore = candidateMetrics.stabilityScore
                 bestGuid = guid
             }
+            // A long candidate scan must not let the published snapshot age out.
+            emit(_diagnostics.value)
         }
         badStreak = 0
         if (bestGuid != null && metrics.isMeasurable && bestScore - metrics.stabilityScore >= MIN_IMPROVEMENT_SCORE) {
@@ -137,7 +151,7 @@ object BoostEngine {
         metrics: RouteMetrics,
         label: String
     ) {
-        _diagnostics.value = OptimizeDiagnostics(
+        emit(OptimizeDiagnostics(
             mode = "BOOST",
             label = label,
             routeGuid = guid,
@@ -152,6 +166,11 @@ object BoostEngine {
             status = if (metrics.isMeasurable && metrics.stabilityScore >= DEGRADED_SCORE_THRESHOLD) "ACTIVE" else "DEGRADED",
             routeLock = false,
             lastCheckMillis = System.currentTimeMillis()
-        )
+        ))
+    }
+
+    /** Updates the in-process value and publishes it for the UI process. */
+    private fun emit(snapshot: OptimizeDiagnostics) {
+        _diagnostics.value = OptimizeDiagnostics.publish(AppConfig.DIAGNOSTICS_BOOST, snapshot)
     }
 }

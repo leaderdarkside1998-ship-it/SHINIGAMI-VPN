@@ -1,9 +1,10 @@
 package com.v2ray.ang.ui.main
 
+import android.os.SystemClock
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -53,6 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -70,7 +72,6 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.ItemDivider
 import com.v2ray.ang.ui.compose.ReorderableGridItem
 import com.v2ray.ang.ui.compose.ReorderableListItem
-import com.v2ray.ang.ui.compose.colorConfigType
 import com.v2ray.ang.ui.compose.colorPingRed
 import com.v2ray.ang.ui.compose.verticalScrollbar
 import sh.calvin.reorderable.ReorderableItem
@@ -344,126 +345,164 @@ private fun ServerListItem(
             animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
         )
     }
-    val cardElevation by animateDpAsState(
-        targetValue = if (isSelected) 4.dp else 1.dp,
-        label = "server_card_elevation"
+    // Flat, hairline-outlined card. Selection is shown by a thin accent line, a soft accent tint and a
+    // slightly stronger outline instead of a heavy bar and shadow.
+    val colors = MaterialTheme.colorScheme
+    val containerColor by animateColorAsState(
+        targetValue = if (isSelected) colors.primary.copy(alpha = 0.07f).compositeOver(colors.surfaceContainerLow) else colors.surfaceContainerLow,
+        label = "server_card_container"
+    )
+    val outlineColor by animateColorAsState(
+        targetValue = if (isSelected) colors.primary.copy(alpha = 0.55f) else colors.outlineVariant.copy(alpha = 0.45f),
+        label = "server_card_outline"
     )
 
     Card(
         modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 3.dp)
             .graphicsLayer {
                 alpha = entrance.value
-                val scale = 0.92f + entrance.value * 0.08f
+                val scale = 0.94f + entrance.value * 0.06f
                 scaleX = scale
                 scaleY = scale
             },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = cardElevation),
-        border = if (isSelected) BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary) else null
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = BorderStroke(if (isSelected) 1.dp else 0.5.dp, outlineColor)
     ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(IntrinsicSize.Min)
-            .semantics {
-                if (selectedStateDescription != null) {
-                    stateDescription = selectedStateDescription
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min)
+                .semantics {
+                    if (selectedStateDescription != null) {
+                        stateDescription = selectedStateDescription
+                    }
                 }
-            }
-            .clickable { actions.select(row.guid) }
-    ) {
-        Box(
-            Modifier
-                .width(10.dp)
-                .fillMaxHeight()
+                .clickable { actions.select(row.guid) }
         ) {
-            if (isSelected) {
-                Row {
-                    Spacer(Modifier.width(6.dp))
+            // Slim selection line (2dp, rounded ends) at the leading edge.
+            Box(
+                Modifier
+                    .width(9.dp)
+                    .fillMaxHeight()
+            ) {
+                if (isSelected) {
                     Box(
                         Modifier
-                            .width(4.dp)
+                            .padding(start = 5.dp, top = 13.dp, bottom = 13.dp)
+                            .width(2.dp)
                             .fillMaxHeight()
-                            .padding(vertical = 10.dp)
-                            .background(MaterialTheme.colorScheme.primary)
+                            .clip(RoundedCornerShape(1.dp))
+                            .background(colors.primary)
+                    )
+                }
+            }
+
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(start = 4.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        row.remarks,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyLarge.copy(
+                            fontSize = 14.sp,
+                            lineHeight = 20.sp,
+                            fontWeight = FontWeight.Light,
+                            letterSpacing = 0.1.sp,
+                            lineBreak = LineBreak.Paragraph
+                        ),
+                        color = colors.onSurface,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    val iconTint = colors.onSurfaceVariant.copy(alpha = 0.75f)
+                    if (doubleColumnDisplay) {
+                        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                            Icon(
+                                painterResource(R.drawable.ic_more_vert_24dp),
+                                stringResource(R.string.acc_more),
+                                Modifier.size(20.dp),
+                                tint = iconTint
+                            )
+                        }
+                    } else {
+                        IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                            Icon(
+                                painterResource(R.drawable.ic_share_24dp),
+                                stringResource(R.string.title_configuration_share),
+                                Modifier.size(19.dp),
+                                tint = iconTint
+                            )
+                        }
+                        IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                            Icon(
+                                painterResource(R.drawable.ic_edit_24dp),
+                                stringResource(R.string.acc_edit),
+                                Modifier.size(19.dp),
+                                tint = iconTint
+                            )
+                        }
+                        IconButton(onClick = { actions.remove(row.guid) }, Modifier.size(32.dp)) {
+                            Icon(
+                                painterResource(R.drawable.ic_delete_24dp),
+                                stringResource(R.string.acc_delete),
+                                Modifier.size(19.dp),
+                                tint = iconTint
+                            )
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    if (row.subscriptionBadge.isNotBlank()) {
+                        Box(
+                            Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(colors.primary.copy(alpha = 0.14f)), Alignment.Center
+                        ) {
+                            Text(row.subscriptionBadge.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                        }
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(
+                        row.statistics,
+                        Modifier.weight(1f),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Light),
+                        color = colors.onSurfaceVariant.copy(alpha = 0.85f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    // Protocol shown as a quiet tinted tag rather than loud orange text.
+                    Text(
+                        row.typeDescription,
+                        Modifier
+                            .weight(1f, fill = false)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(colors.onSurface.copy(alpha = 0.06f))
+                            .padding(horizontal = 7.dp, vertical = 1.5.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.5.sp, lineHeight = 14.sp, letterSpacing = 0.4.sp),
+                        color = colors.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    PingSlot(
+                        guid = row.guid,
+                        delayMillis = row.testDelayMillis,
+                        resultText = testResult,
+                        onTest = { actions.testPing(row.guid) }
                     )
                 }
             }
         }
-
-        Column(
-            Modifier
-                .weight(1f)
-                .padding(start = 8.dp, end = 12.dp, top = 8.dp, bottom = 8.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(row.remarks, Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge.copy(lineBreak = LineBreak.Paragraph), maxLines = 2, overflow = TextOverflow.Ellipsis)
-                if (doubleColumnDisplay) {
-                    IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_more_vert_24dp),
-                            stringResource(R.string.acc_more),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                } else {
-                    IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_share_24dp),
-                            stringResource(R.string.title_configuration_share),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                    IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_edit_24dp),
-                            stringResource(R.string.acc_edit),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                    IconButton(onClick = { actions.remove(row.guid) }, Modifier.size(36.dp)) {
-                        Icon(
-                            painterResource(R.drawable.ic_delete_24dp),
-                            stringResource(R.string.acc_delete),
-                            Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                if (row.subscriptionBadge.isNotBlank()) {
-                    Box(
-                        Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)), Alignment.Center
-                    ) {
-                        Text(row.subscriptionBadge.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                    }
-                }
-                Text(
-                    row.statistics,
-                    Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 13.sp),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Spacer(modifier = Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(row.typeDescription, Modifier.weight(1f, fill = false), style = MaterialTheme.typography.bodySmall, color = colorConfigType, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                PingSlot(
-                    delayMillis = row.testDelayMillis,
-                    resultText = testResult,
-                    onTest = { actions.testPing(row.guid) }
-                )
-            }
-        }
-    }
     }
 }
 
@@ -483,42 +522,67 @@ internal suspend fun PagerState.navigateToPageOptimized(
     }
 }
 
-/** How long a fresh ping result stays visible before the slot returns to the bolt icon. */
-private const val PING_RESULT_VISIBLE_MS = 4000L
+/** How long a fresh ping result stays visible (5 minutes) before the slot returns to the bolt icon. */
+private const val PING_RESULT_VISIBLE_MS = 5 * 60 * 1000L
+
+/**
+ * When each server's latest ping result arrived (elapsed-realtime ms), keyed by server GUID. Kept
+ * outside the composable so scrolling a card away and back, or a list rebuild, does not cut the
+ * 5 minute display short.
+ */
+private val pingResultArrivedAt = HashMap<String, Long>()
+
+private fun pingResultRemainingMs(guid: String): Long {
+    val arrivedAt = pingResultArrivedAt[guid] ?: return 0L
+    val remaining = PING_RESULT_VISIBLE_MS - (SystemClock.elapsedRealtime() - arrivedAt)
+    if (remaining <= 0L) pingResultArrivedAt.remove(guid)
+    return remaining.coerceAtLeast(0L)
+}
 
 /** Safety net: stop the "testing" pulse if a result never arrives (cancelled / failed to start). */
 private const val PING_TEST_TIMEOUT_MS = 20000L
 
 /**
  * Ping slot of a server card. Idle it shows a bolt icon (like the FL proxies screen); tapping it
- * starts a test and the bolt pulses while it runs; the result is then shown for a few seconds and
- * the slot goes back to the bolt so it can be tapped again straight away.
+ * starts a test and the bolt pulses while it runs; the result (single or group test) is then shown
+ * for 5 minutes and the slot goes back to the bolt so it can be tapped again.
  */
 @Composable
 private fun PingSlot(
+    guid: String,
     delayMillis: Long,
     resultText: String,
     onTest: () -> Unit,
 ) {
     var testing by remember { mutableStateOf(false) }
-    var showResult by remember { mutableStateOf(false) }
-    var previous by remember { mutableLongStateOf(delayMillis) }
+    var showResult by remember(guid) {
+        mutableStateOf(delayMillis != 0L && pingResultRemainingMs(guid) > 0L)
+    }
+    var previous by remember(guid) { mutableLongStateOf(delayMillis) }
 
-    // A result "arrives" when the value goes from cleared (0) to something; values that were
-    // already stored before this card was shown stay hidden behind the bolt.
+    // A result "arrives" when the value goes from cleared (0) to something (every single or group
+    // test clears it first). Values stored before this session stay hidden behind the bolt. The
+    // result is shown for whatever is left of its 5 minutes, then the bolt returns.
     LaunchedEffect(delayMillis) {
         val arrived = delayMillis != 0L && previous == 0L
         previous = delayMillis
         if (delayMillis == 0L) {
+            pingResultArrivedAt.remove(guid)
             showResult = false
             return@LaunchedEffect
         }
         if (arrived) {
             testing = false
-            showResult = true
-            delay(PING_RESULT_VISIBLE_MS)
-            showResult = false
+            pingResultArrivedAt[guid] = SystemClock.elapsedRealtime()
         }
+        val remaining = pingResultRemainingMs(guid)
+        if (remaining <= 0L) {
+            showResult = false
+            return@LaunchedEffect
+        }
+        showResult = true
+        delay(remaining)
+        showResult = false
     }
     LaunchedEffect(testing) {
         if (testing) {
@@ -552,7 +616,7 @@ private fun PingSlot(
         if (showResult && delayMillis != 0L) {
             Text(
                 resultText,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Light),
                 color = if (delayMillis < 0L) colorPingRed else MaterialTheme.colorScheme.tertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -563,7 +627,7 @@ private fun PingSlot(
                 contentDescription = stringResource(R.string.connection_test_pending),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(18.dp)
                     .graphicsLayer { alpha = if (testing) pulseAlpha else 1f }
             )
         }

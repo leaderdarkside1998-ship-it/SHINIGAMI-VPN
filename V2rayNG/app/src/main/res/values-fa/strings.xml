@@ -167,6 +167,14 @@
     <string name="per_app_proxy_settings">تنظیمات به تفکیک برنامه</string>
     <string name="title_gaming_mode">حالت گیمینگ</string>
     <string name="summary_gaming_mode">بازی‌های انتخابی رو روی کم‌پینگ‌ترین سرور و بدون تأخیر اجرا کن</string>
+    <string name="title_select_game">انتخاب بازی</string>
+    <string name="summary_select_game">یک بازی نصب‌شده رو انتخاب کن تا اجرا بشه و کل ظرفیت تانل فقط برای اون رزرو بشه. در گوشی روت‌شده، تا وقتی این حالت فعاله بقیه‌ی برنامه‌ها هم اینترنت ندارن؛ بدون روت، بقیه‌ی برنامه‌ها فقط از تانل استفاده نمی‌کنن و از اتصال عادی گوشی استفاده می‌کنن.</string>
+    <string name="toast_select_game_not_launchable">این برنامه مستقیم قابل باز شدن نیست</string>
+    <string name="label_game_exclusive_active">حالت اختصاصی فعال: %1$s</string>
+    <string name="notification_game_exclusive_title">حالت اختصاصی: %1$s</string>
+    <string name="notification_game_exclusive_root">اینترنت بقیه‌ی برنامه‌ها قطع شده (روت)</string>
+    <string name="notification_game_exclusive_no_root">فقط همین بازی از تانل استفاده می‌کنه؛ بقیه از اتصال عادی گوشی استفاده می‌کنن</string>
+    <string name="notification_action_end_game_exclusive">پایان</string>
     <string name="title_lock_gaming_route">قفل کردن مسیر گیمینگ</string>
     <string name="title_boost_mode">BOOST</string>
     <string name="summary_boost_mode">وقتی سرعت برنامه‌های انتخابی افت کرد، روی سریع‌ترین سرور نگه‌شون دار</string>
@@ -317,7 +325,6 @@
     <string name="title_pref_ui_mode_night">تنظیمات حالت رابط کاربری</string>
     <string name="title_pref_dynamic_color">فعال‌سازی رنگ پویا</string>
     <string name="summary_pref_dynamic_color">فقط روی اندروید ۱۲+ کار می‌کند</string>
-    <string name="title_pref_app_accent_theme">رنگ تم برنامه</string>
     <string name="title_pref_use_hev_tunnel">استفاده از Hev TUN</string>
     <string name="summary_pref_use_hev_tunnel">اگر فعال باشد، تونل VPN از hev-socks5-tunnel استفاده می‌کند؛ در غیر این صورت از xray-core استفاده خواهد شد.</string>
     <string name="title_pref_hev_tunnel_loglevel">سطح گزارش‌های Hev TUN</string>
@@ -502,14 +509,6 @@
         <item>پیش فرض سیستم</item>
         <item>روشن</item>
         <item>تاریک</item>
-    </string-array>
-
-    <string-array name="app_accent_theme">
-        <item>فیروزه‌ای (پیش‌فرض)</item>
-        <item>آبی</item>
-        <item>بنفش</item>
-        <item>قرمز</item>
-        <item>نارنجی (کلاسیک)</item>
     </string-array>
 
     <string name="routing_preset_china_whitelist">لیست سفید چین ( دور زدن سرزمین اصلی )</string>
