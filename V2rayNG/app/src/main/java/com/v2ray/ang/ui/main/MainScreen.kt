@@ -189,7 +189,8 @@ fun MainScreen(
                     isRunning = isRunning,
                     isDarkTheme = isDarkTheme,
                     connectedSinceMillis = uiState.connectedSinceMillis,
-                    onAction = onAction
+                    onAction = onAction,
+                    onAiClick = { onNavigate(MainDestination.Shinigami) }
                 )
             },
             floatingActionButton = {},

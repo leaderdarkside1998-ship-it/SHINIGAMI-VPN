@@ -47,7 +47,8 @@ fun MainBottomBar(
     isRunning: Boolean,
     isDarkTheme: Boolean,
     connectedSinceMillis: Long?,
-    onAction: (MainAction) -> Unit
+    onAction: (MainAction) -> Unit,
+    onAiClick: () -> Unit
 ) {
     Box(modifier = Modifier.fillMaxWidth()) {
         Column(
@@ -75,42 +76,44 @@ fun MainBottomBar(
                 )
             }
         }
-        if (isRunning) {
-            // While running, a pill in the accent color that holds the stop square and the live start-time counter
-            // takes the place of the start button, so tapping it stops the service. (The round
-            // "test connection" button was removed; the bottom bar row still tests on tap.)
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = ControlsEndPadding)
-                    .offset(y = (-24).dp)
-                    .navigationBarsPadding(),
-                horizontalAlignment = Alignment.End
-            ) {
+        // Shared column: the small round "AI" button sits above the power control,
+        // whichever state (start FAB or running stop-pill) that control is in.
+        Column(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(end = ControlsEndPadding)
+                .offset(y = (-24).dp)
+                .navigationBarsPadding(),
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(AiButtonSpacing)
+        ) {
+            AiCircleButton(onClick = onAiClick)
+
+            if (isRunning) {
+                // While running, a pill in the accent color that holds the stop square and the live start-time counter
+                // takes the place of the start button, so tapping it stops the service. (The round
+                // "test connection" button was removed; the bottom bar row still tests on tap.)
                 StopTimerPill(
                     connectedSinceMillis = connectedSinceMillis,
                     onClick = { onAction(MainAction.ToggleService) }
                 )
-            }
-        } else {
-            FloatingActionButton(
-                onClick = { onAction(MainAction.ToggleService) },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(end = ControlsEndPadding)
-                    .offset(y = (-28).dp)
-                    .navigationBarsPadding()
-                    .size(ControlFabSize),
-                shape = CircleShape,
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_play_24dp),
-                    contentDescription = stringResource(R.string.acc_start),
-                    tint = MaterialTheme.colorScheme.onPrimary,
-                    modifier = Modifier.size(28.dp)
-                )
+            } else {
+                FloatingActionButton(
+                    onClick = { onAction(MainAction.ToggleService) },
+                    modifier = Modifier
+                        .offset(y = (-4).dp)
+                        .size(ControlFabSize),
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_play_24dp),
+                        contentDescription = stringResource(R.string.acc_start),
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
             }
         }
     }
@@ -118,6 +121,30 @@ fun MainBottomBar(
 
 private val ControlFabSize = 56.dp
 private val ControlsEndPadding = 16.dp
+private val AiButtonSize = 32.dp
+private val AiButtonSpacing = 10.dp
+
+/** Small round button, labeled "AI", that opens the SHINIGAMI AI assistant screen. */
+@Composable
+private fun AiCircleButton(onClick: () -> Unit) {
+    val aiDescription = stringResource(R.string.acc_shinigami_ai)
+    Box(
+        modifier = Modifier
+            .size(AiButtonSize)
+            .clip(CircleShape)
+            .background(MaterialTheme.colorScheme.secondary)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = aiDescription },
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = stringResource(R.string.shinigami_ai_button_label),
+            color = MaterialTheme.colorScheme.onSecondary,
+            style = MaterialTheme.typography.labelSmall,
+            fontSize = 11.sp
+        )
+    }
+}
 
 /** Pill in the app accent color: stop square + "HH:MM:SS" session counter (follows the theme color). */
 @Composable

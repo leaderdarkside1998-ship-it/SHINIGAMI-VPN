@@ -41,7 +41,6 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
 }
 
 private val primaryDrawerItems = listOf(
-    MainDestination.Shinigami,
     MainDestination.Subscriptions,
     MainDestination.PerAppProxy,
     MainDestination.Gaming,
