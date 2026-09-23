@@ -6,10 +6,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 
 class RealPingExecutionLimiterTest {
@@ -36,26 +33,25 @@ class RealPingExecutionLimiterTest {
     }
 
     @Test
-    fun generatedConfigMeasurementsRemainConcurrent() {
+    fun generatedConfigMeasurementsAreAlsoSerialized() {
+        // Every config type shares the same native probe, which is not safe to run
+        // concurrently, so generated (non-custom) configs must be serialized too.
         runBlocking {
-            val entered = CountDownLatch(2)
-            val release = CountDownLatch(1)
+            val active = AtomicInteger(0)
+            val maxActive = AtomicInteger(0)
 
-            val jobs = List(2) {
+            List(8) {
                 async(Dispatchers.Default) {
                     RealPingExecutionLimiter.run(EConfigType.VMESS) {
-                        entered.countDown()
-                        release.await(5, TimeUnit.SECONDS)
+                        val current = active.incrementAndGet()
+                        maxActive.accumulateAndGet(current, ::maxOf)
+                        Thread.sleep(20)
+                        active.decrementAndGet()
                     }
                 }
-            }
+            }.awaitAll()
 
-            try {
-                assertTrue(entered.await(5, TimeUnit.SECONDS))
-            } finally {
-                release.countDown()
-            }
-            jobs.awaitAll()
+            assertEquals(1, maxActive.get())
         }
     }
 }
