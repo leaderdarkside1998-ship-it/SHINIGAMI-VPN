@@ -30,6 +30,7 @@ data class MainUiState(
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = true,
+    val pingAutoHide: Boolean = true,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null
 )
 
@@ -48,6 +49,7 @@ sealed interface MainAction {
     data object RemoveDuplicateServers : MainAction
     data object RemoveInvalidServers : MainAction
     data object SortByTestResults : MainAction
+    data object TogglePingAutoHide : MainAction
     data object UpdateSubscriptions : MainAction
     data object ExportAll : MainAction
 

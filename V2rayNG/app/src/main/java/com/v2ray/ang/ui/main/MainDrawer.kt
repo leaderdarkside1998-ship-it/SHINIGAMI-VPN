@@ -27,6 +27,7 @@ import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.verticalScrollbar
 
 enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRes: Int) {
+    Shinigami(R.drawable.ic_shinigami_24dp, R.string.shinigami_title),
     Subscriptions(R.drawable.ic_subscriptions_24dp, R.string.title_sub_setting),
     PerAppProxy(R.drawable.ic_per_apps_24dp, R.string.per_app_proxy_settings),
     Gaming(R.drawable.ic_gaming_24dp, R.string.title_gaming_mode),
@@ -40,6 +41,7 @@ enum class MainDestination(@DrawableRes val iconRes: Int, @StringRes val labelRe
 }
 
 private val primaryDrawerItems = listOf(
+    MainDestination.Shinigami,
     MainDestination.Subscriptions,
     MainDestination.PerAppProxy,
     MainDestination.Gaming,

@@ -15,6 +15,10 @@
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">توقف</string>
+    <string name="notification_action_switch_server">سویچ سرور</string>
+    <string name="notification_action_test_ping">تست پینگ</string>
+    <string name="notification_ping_value">پینگ: %d ms</string>
+    <string name="notification_ping_failed">پینگ: قطع است</string>
     <string name="toast_permission_denied">امکان دریافت مجوز وجود ندارد</string>
     <string name="toast_permission_denied_notification">امکان دریافت مجوز ارسال اعلان وجود ندارد</string>
     <string name="notification_action_more">برای اطلاعات بیشتر کلیک کنید</string>
@@ -641,5 +645,31 @@
         <item>متعادل</item>
         <item>شدید</item>
     </string-array>
+
+    <string name="shinigami_title">SHINIGAMI</string>
+    <string name="shinigami_intro">به SHINIGAMI بگو برای چه کاری سرور می‌خوای، یا یکی از گزینه‌های زیر را انتخاب کن.</string>
+    <string name="shinigami_analyzing">در حال تحلیل شبکه و سرورها…</string>
+    <string name="shinigami_analysis_complete">Analysis Complete</string>
+    <string name="shinigami_comparison_title">مقایسه سایر سرورها</string>
+    <string name="shinigami_new_analysis">تحلیل جدید</string>
+    <string name="shinigami_connect">CONNECT</string>
+    <string name="shinigami_score_format">امتیاز: %1$d/100</string>
+    <string name="shinigami_score_na">نامشخص</string>
+    <string name="shinigami_metric_ping">Ping: %1$d ms</string>
+    <string name="shinigami_metric_jitter">Jitter: %1$d ms</string>
+    <string name="shinigami_metric_loss">Packet Loss: %1$d%%</string>
+    <string name="shinigami_chat_placeholder">از SHINIGAMI بپرس…</string>
+    <string name="shinigami_chat_send">ارسال</string>
+    <string name="shinigami_chat_unrecognized">متوجه نشدم برای چه کاری سرور می‌خوای؛ یکی از ۵ گزینه بالا را انتخاب کن.</string>
+    <string name="shinigami_preset_gaming_title">🎮 بازی</string>
+    <string name="shinigami_preset_gaming_question">کدام سرور مناسب بازی است؟</string>
+    <string name="shinigami_preset_instagram_title">📱 اینستاگرام</string>
+    <string name="shinigami_preset_instagram_question">کدام سرور مناسب اینستاگرام است؟</string>
+    <string name="shinigami_preset_download_title">⬇️ دانلود</string>
+    <string name="shinigami_preset_download_question">کدام سرور مناسب دانلود است؟</string>
+    <string name="shinigami_preset_voice_title">🎙️ ویس کال</string>
+    <string name="shinigami_preset_voice_question">کدام سرور مناسب ویس کال است؟</string>
+    <string name="shinigami_preset_streaming_title">📺 استریم</string>
+    <string name="shinigami_preset_streaming_question">کدام سرور مناسب استریم است؟</string>
 
 </resources>

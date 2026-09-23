@@ -25,7 +25,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.AnimatedShinigamiIcon
 import com.v2ray.ang.ui.compose.AppTopBar
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.resolveDarkTheme
@@ -73,10 +72,14 @@ fun MainTopBar(
             }
         },
         actions = {
-            if (isTesting) {
-                AnimatedShinigamiIcon(modifier = Modifier.size(36.dp))
-            }
             if (!showSearch) {
+                val pingAutoHide = LocalPingAutoHide.current
+                IconButton(onClick = { onAction(MainAction.TogglePingAutoHide) }) {
+                    Icon(
+                        painterResource(if (pingAutoHide) R.drawable.ic_bolt_24dp else R.drawable.ic_flash_off_24dp),
+                        contentDescription = stringResource(R.string.acc_toggle_ping_auto_hide)
+                    )
+                }
                 val isDarkTheme = resolveDarkTheme()
                 IconButton(onClick = {
                     ThemeManager.setThemeMode(if (isDarkTheme) "1" else "2")

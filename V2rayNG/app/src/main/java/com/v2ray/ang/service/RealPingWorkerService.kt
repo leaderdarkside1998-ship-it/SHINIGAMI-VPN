@@ -25,17 +25,19 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
 
 internal object RealPingExecutionLimiter {
-    private val customConfigMutex = Mutex()
+    private val nativeProbeMutex = Mutex()
 
+    /**
+     * Every config type ends up calling the same native (JNI) outbound-delay probe in
+     * [CoreNativeManager.measureOutboundDelay]. That native call is not safe to run
+     * concurrently: overlapping probes can corrupt or abort each other's temporary Xray
+     * instance, which surfaces as some servers in a batch silently failing or coming back
+     * "invalid" even though they work fine when tested one at a time. Serialize every native
+     * probe globally across batches; TCP-only pings never reach this path and keep running
+     * fully concurrently.
+     */
     suspend fun <T> run(configType: EConfigType, block: () -> T): T {
-        // Custom profiles bypass speed-test trimming and start complete Xray configs.
-        // Parallel teardown can abort the native probe process, so serialize their
-        // JNI measurements globally across batches.
-        return if (configType == EConfigType.CUSTOM) {
-            customConfigMutex.withLock { block() }
-        } else {
-            block()
-        }
+        return nativeProbeMutex.withLock { block() }
     }
 }
 

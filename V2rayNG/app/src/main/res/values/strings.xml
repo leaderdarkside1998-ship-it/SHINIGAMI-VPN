@@ -15,6 +15,10 @@
 
     <!-- Notifications -->
     <string name="notification_action_stop_v2ray">Stop</string>
+    <string name="notification_action_switch_server">Switch server</string>
+    <string name="notification_action_test_ping">Test ping</string>
+    <string name="notification_ping_value">Ping: %d ms</string>
+    <string name="notification_ping_failed">Ping: timeout</string>
     <string name="toast_permission_denied">Permission denied</string>
     <string name="toast_permission_denied_notification">Notification permission denied</string>
     <string name="notification_action_more">Tap for more</string>
@@ -165,6 +169,31 @@
     <string name="menu_item_export_proxy_app">Export to Clipboard</string>
     <string name="menu_item_import_proxy_app">Import from Clipboard</string>
     <string name="per_app_proxy_settings">Per-app settings</string>
+    <string name="shinigami_title">SHINIGAMI</string>
+    <string name="shinigami_intro">Tell SHINIGAMI what you need a server for, or pick one of the options below.</string>
+    <string name="shinigami_analyzing">Analyzing network and servers…</string>
+    <string name="shinigami_analysis_complete">Analysis Complete</string>
+    <string name="shinigami_comparison_title">Compare other servers</string>
+    <string name="shinigami_new_analysis">New analysis</string>
+    <string name="shinigami_connect">CONNECT</string>
+    <string name="shinigami_score_format">Score: %1$d/100</string>
+    <string name="shinigami_score_na">N/A</string>
+    <string name="shinigami_metric_ping">Ping: %1$d ms</string>
+    <string name="shinigami_metric_jitter">Jitter: %1$d ms</string>
+    <string name="shinigami_metric_loss">Packet Loss: %1$d%%</string>
+    <string name="shinigami_chat_placeholder">Ask SHINIGAMI…</string>
+    <string name="shinigami_chat_send">Send</string>
+    <string name="shinigami_chat_unrecognized">Couldn\'t tell what you need a server for; pick one of the 5 options above.</string>
+    <string name="shinigami_preset_gaming_title">🎮 Gaming</string>
+    <string name="shinigami_preset_gaming_question">Which server is best for gaming?</string>
+    <string name="shinigami_preset_instagram_title">📱 Instagram</string>
+    <string name="shinigami_preset_instagram_question">Which server is best for Instagram?</string>
+    <string name="shinigami_preset_download_title">⬇️ Download</string>
+    <string name="shinigami_preset_download_question">Which server is best for downloading?</string>
+    <string name="shinigami_preset_voice_title">🎙️ Voice Call</string>
+    <string name="shinigami_preset_voice_question">Which server is best for voice calls?</string>
+    <string name="shinigami_preset_streaming_title">📺 Streaming</string>
+    <string name="shinigami_preset_streaming_question">Which server is best for streaming?</string>
     <string name="title_gaming_mode">Gaming</string>
     <string name="summary_gaming_mode">Route the selected games through the lowest-ping server, with no delay</string>
     <string name="title_lock_gaming_route">Lock gaming route</string>
@@ -555,6 +584,7 @@
     <string name="acc_back">Back</string>
     <string name="acc_search">Search</string>
     <string name="acc_toggle_theme">Toggle dark / light theme</string>
+    <string name="acc_toggle_ping_auto_hide">Toggle ping auto-hide (show numbers permanently or revert to bolt after 5 minutes)</string>
     <string name="acc_add">Add configuration</string>
     <string name="acc_more">More options</string>
     <string name="acc_selected_server">Selected</string>

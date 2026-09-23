@@ -21,6 +21,8 @@ interface MainDataSource : Closeable {
     fun getConfirmRemove(): Boolean
     fun getDoubleColumnDisplay(): Boolean
     fun isGroupAllDisplayEnabled(): Boolean
+    fun getPingAutoHide(): Boolean
+    fun setPingAutoHide(value: Boolean)
 
     fun getString(resId: Int): String
     fun getString(resId: Int, vararg formatArgs: Any): String

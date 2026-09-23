@@ -81,7 +81,8 @@ class MainViewModel(
             selectedGroupId = dataSource.getSelectedSubscriptionId(),
             selectedGuid = dataSource.getSelectServer(),
             confirmRemove = dataSource.getConfirmRemove(),
-            doubleColumnDisplay = dataSource.getDoubleColumnDisplay()
+            doubleColumnDisplay = dataSource.getDoubleColumnDisplay(),
+            pingAutoHide = dataSource.getPingAutoHide()
         )
     )
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
@@ -314,6 +315,7 @@ class MainViewModel(
             MainAction.RemoveDuplicateServers -> removeDuplicateServerAsync()
             MainAction.RemoveInvalidServers -> removeInvalidServerAsync()
             MainAction.SortByTestResults -> sortByTestResultsAsync()
+            MainAction.TogglePingAutoHide -> togglePingAutoHide()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
             MainAction.ExportAll -> exportAllAsync()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
@@ -714,6 +716,12 @@ class MainViewModel(
         } else {
             dataSource.removeInvalidServersInGroup("")
         }
+    }
+
+    private fun togglePingAutoHide() {
+        val newValue = !uiState.value.pingAutoHide
+        dataSource.setPingAutoHide(newValue)
+        _uiState.update { it.copy(pingAutoHide = newValue) }
     }
 
     private fun sortByTestResultsAsync() {

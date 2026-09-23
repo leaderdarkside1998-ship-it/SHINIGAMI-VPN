@@ -444,6 +444,24 @@ object CoreServiceManager {
     }
 
     /**
+     * Picks the saved server with the best (lowest) last-known real-ping result, among all
+     * saved servers except [currentGuid]. Servers never tested or whose last test failed
+     * (testDelayMillis <= 0) are not considered. Returns null when no other tested-and-reachable
+     * server exists, so the caller falls back to reconnecting the current server.
+     */
+    private fun findBestAlternativeServerGuid(currentGuid: String?): String? {
+        return MmkvManager.decodeAllServerList()
+            .asSequence()
+            .filter { it != currentGuid }
+            .mapNotNull { guid ->
+                val delay = MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L
+                if (delay > 0L) guid to delay else null
+            }
+            .minByOrNull { it.second }
+            ?.first
+    }
+
+    /**
      * Measures the connection delay for the current V2Ray configuration.
      * Tests with primary URL first, then falls back to alternative URL if needed.
      * Also fetches remote IP information if the delay test was successful.
@@ -496,6 +514,13 @@ object CoreServiceManager {
             )
             withContext(Dispatchers.Main.immediate) {
                 if (isRunning()) {
+                    NotificationManager.setPingLine(
+                        if (time >= 0) {
+                            service.getString(R.string.notification_ping_value, time)
+                        } else {
+                            service.getString(R.string.notification_ping_failed)
+                        }
+                    )
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
                 } else {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
@@ -651,6 +676,28 @@ object CoreServiceManager {
                     val pendingResult = goAsync()
                     CoroutineScope(Dispatchers.Default).launch {
                         try {
+                            serviceControl.stopService()
+                            delay(500L)
+                            LauncherManager.startService(serviceControl.getService())
+                        } finally {
+                            pendingResult.finish()
+                        }
+                    }
+                }
+
+                AppConfig.MSG_STATE_SWITCH_BEST -> {
+                    LogUtil.i(AppConfig.TAG, "StartCore-Manager: Switch to best-ping server")
+                    if (isOrderedBroadcast) resultCode = Activity.RESULT_OK
+
+                    val currentGuid = MmkvManager.getSelectServer()
+                    val bestGuid = findBestAlternativeServerGuid(currentGuid)
+
+                    val pendingResult = goAsync()
+                    CoroutineScope(Dispatchers.Default).launch {
+                        try {
+                            if (bestGuid != null) {
+                                MmkvManager.setSelectServer(bestGuid)
+                            }
                             serviceControl.stopService()
                             delay(500L)
                             LauncherManager.startService(serviceControl.getService())

@@ -30,7 +30,8 @@ object NotificationManager {
     private const val NOTIFICATION_ID = 1
     private const val NOTIFICATION_PENDING_INTENT_CONTENT = 0
     private const val NOTIFICATION_PENDING_INTENT_STOP_V2RAY = 1
-    private const val NOTIFICATION_PENDING_INTENT_RESTART_V2RAY = 2
+    private const val NOTIFICATION_PENDING_INTENT_SWITCH_BEST = 3
+    private const val NOTIFICATION_PENDING_INTENT_TEST_PING = 4
     private const val NOTIFICATION_ICON_THRESHOLD = 3000
     private const val QUERY_INTERVAL_MS = 3000L
 
@@ -39,6 +40,7 @@ object NotificationManager {
     private var speedNotificationJob: Job? = null
     private var mNotificationManager: NotificationManager? = null
     private var statusLine: String? = null
+    private var pingLine: String? = null
     private var lastContentText: String? = null
 
     /**
@@ -48,6 +50,19 @@ object NotificationManager {
      */
     fun setStatusLine(text: String?) {
         statusLine = text
+        refreshNotificationContent()
+    }
+
+    /**
+     * Shows the last measured real-ping value for the connected server, e.g. after the user taps
+     * the "Test ping" notification action. Pass null to hide the line again.
+     */
+    fun setPingLine(text: String?) {
+        pingLine = text
+        refreshNotificationContent()
+    }
+
+    private fun refreshNotificationContent() {
         val builder = mBuilder ?: return
         val content = composeContentText()
         builder.setStyle(NotificationCompat.BigTextStyle().bigText(content))
@@ -56,7 +71,7 @@ object NotificationManager {
     }
 
     private fun composeContentText(): String? =
-        listOfNotNull(statusLine, lastContentText?.takeIf { it.isNotEmpty() })
+        listOfNotNull(statusLine, pingLine, lastContentText?.takeIf { it.isNotEmpty() })
             .joinToString("\n")
             .ifEmpty { null }
 
@@ -88,6 +103,7 @@ object NotificationManager {
         // Reset last query time to avoid querying stats too soon after showing the notification
         lastQueryTime = System.currentTimeMillis()
         lastContentText = null
+        pingLine = null
 
         val flags = PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
 
@@ -99,10 +115,15 @@ object NotificationManager {
         stopV2RayIntent.putExtra("key", AppConfig.MSG_STATE_STOP)
         val stopV2RayPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_STOP_V2RAY, stopV2RayIntent, flags)
 
-        val restartV2RayIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
-        restartV2RayIntent.`package` = AppConfig.ANG_PACKAGE
-        restartV2RayIntent.putExtra("key", AppConfig.MSG_STATE_RESTART)
-        val restartV2RayPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_RESTART_V2RAY, restartV2RayIntent, flags)
+        val switchBestIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
+        switchBestIntent.`package` = AppConfig.ANG_PACKAGE
+        switchBestIntent.putExtra("key", AppConfig.MSG_STATE_SWITCH_BEST)
+        val switchBestPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_SWITCH_BEST, switchBestIntent, flags)
+
+        val testPingIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
+        testPingIntent.`package` = AppConfig.ANG_PACKAGE
+        testPingIntent.putExtra("key", AppConfig.MSG_MEASURE_DELAY)
+        val testPingPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_TEST_PING, testPingIntent, flags)
 
         val channelId =
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -129,9 +150,14 @@ object NotificationManager {
                 stopV2RayPendingIntent
             )
             .addAction(
+                R.drawable.ic_bolt_24dp,
+                service.getString(R.string.notification_action_switch_server),
+                switchBestPendingIntent
+            )
+            .addAction(
                 R.drawable.ic_restore_24dp,
-                service.getString(R.string.title_service_restart),
-                restartV2RayPendingIntent
+                service.getString(R.string.notification_action_test_ping),
+                testPingPendingIntent
             )
 
         //mBuilder?.setDefaults(NotificationCompat.FLAG_ONLY_ALERT_ONCE)
@@ -159,6 +185,7 @@ object NotificationManager {
 
         mBuilder = null
         statusLine = null
+        pingLine = null
         lastContentText = null
         speedNotificationJob?.cancel()
         speedNotificationJob = null
