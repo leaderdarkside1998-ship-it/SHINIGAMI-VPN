@@ -642,6 +642,7 @@ class MainViewModel(
     }
 
 
+    private fun exportAllAsync() {
         launchLoading {
             withContext(ioDispatcher) {
                 try {
