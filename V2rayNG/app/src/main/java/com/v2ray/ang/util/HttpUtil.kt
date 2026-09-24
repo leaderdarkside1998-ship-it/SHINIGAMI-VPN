@@ -193,6 +193,7 @@ object HttpUtil {
                     }
 
                     response.isSuccessful -> {
+                        request.onResponseHeaders?.invoke(response.headers)
                         return response.body?.string() ?: ""
                     }
 
@@ -268,6 +269,41 @@ object HttpUtil {
             }
         }
     }
+
+    /**
+     * Parses the de-facto standard `subscription-userinfo` response header
+     * (`upload=123; download=456; total=789; expire=1717027200`, any subset of those four
+     * key=value pairs, in any order) into raw byte/epoch-second values. Returns null only when
+     * none of the four keys were present at all; every individual field the header omits stays
+     * null in the result rather than being guessed.
+     */
+    fun parseSubscriptionUserInfo(headerValue: String?): SubscriptionUserInfo? {
+        if (headerValue.isNullOrBlank()) return null
+        var upload: Long? = null
+        var download: Long? = null
+        var total: Long? = null
+        var expire: Long? = null
+        headerValue.split(";").forEach { part ->
+            val kv = part.trim().split("=", limit = 2)
+            if (kv.size != 2) return@forEach
+            val value = kv[1].trim().toLongOrNull() ?: return@forEach
+            when (kv[0].trim().lowercase()) {
+                "upload" -> upload = value
+                "download" -> download = value
+                "total" -> total = value
+                "expire" -> expire = value
+            }
+        }
+        if (upload == null && download == null && total == null && expire == null) return null
+        return SubscriptionUserInfo(upload, download, total, expire)
+    }
+
+    data class SubscriptionUserInfo(
+        val uploadBytes: Long?,
+        val downloadBytes: Long?,
+        val totalBytes: Long?,
+        val expireEpochSeconds: Long?
+    )
 
     fun downloadToFile(
         request: UrlContentRequest,

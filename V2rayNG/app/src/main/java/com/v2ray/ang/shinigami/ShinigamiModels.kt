@@ -62,3 +62,18 @@ data class ShinigamiAnalysisResult(
 ) {
     val best: ShinigamiServerScore? get() = ranked.firstOrNull { it.score != null }
 }
+
+/** Severity of one line in the live analysis terminal; only decides the line's colour. */
+enum class ShinigamiLogLevel { CMD, INFO, OK, WARN, ERROR }
+
+/** One line of the live analysis terminal shown while SHINIGAMI is testing servers. */
+data class ShinigamiLogLine(val level: ShinigamiLogLevel, val text: String)
+
+/** Short one-line summary of the snapshot for the analysis terminal, e.g. "Mobile 4G, down 25 Mbps". */
+fun ShinigamiNetworkSnapshot.describe(): String = buildString {
+    append(transport)
+    cellularGeneration?.let { append(' ').append(it) }
+    downstreamKbps?.let { append(", down ").append(it / 1000).append(" Mbps") }
+    if (isMetered == true) append(", metered")
+    if (isInternetValidated == false) append(", not validated")
+}

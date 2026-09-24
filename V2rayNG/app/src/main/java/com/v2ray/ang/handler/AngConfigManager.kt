@@ -506,6 +506,14 @@ object AngConfigManager {
             val proxyUsername = SettingsManager.getSocksUsername()
             val proxyPassword = SettingsManager.getSocksPassword()
 
+            // Captured from whichever request below actually succeeds; most subscription panels
+            // send this on the same response that carries the config body, so there is no
+            // separate request for it.
+            var userInfo: HttpUtil.SubscriptionUserInfo? = null
+            val captureHeaders: (okhttp3.Headers) -> Unit = { headers ->
+                userInfo = HttpUtil.parseSubscriptionUserInfo(headers["subscription-userinfo"])
+            }
+
             var configText = try {
                 val httpPort = SettingsManager.getHttpPort()
                 HttpUtil.getUrlContentWithUserAgent(
@@ -516,7 +524,8 @@ object AngConfigManager {
                         timeout = 15000,
                         httpPort = httpPort,
                         proxyUsername = proxyUsername,
-                        proxyPassword = proxyPassword
+                        proxyPassword = proxyPassword,
+                        onResponseHeaders = captureHeaders
                     )
                 )
             } catch (e: Exception) {
@@ -529,7 +538,8 @@ object AngConfigManager {
                         UrlContentRequest(
                             url = url,
                             userAgent = userAgent,
-                            requestHeaders = requestHeaders
+                            requestHeaders = requestHeaders,
+                            onResponseHeaders = captureHeaders
                         )
                     )
                 } catch (e: Exception) {
@@ -544,6 +554,13 @@ object AngConfigManager {
             val count = parseConfigViaSub(configText, it.guid, false)
             if (count > 0) {
                 it.subscription.lastUpdated = System.currentTimeMillis()
+                userInfo?.let { info ->
+                    it.subscription.trafficUploadBytes = info.uploadBytes
+                    it.subscription.trafficDownloadBytes = info.downloadBytes
+                    it.subscription.trafficTotalBytes = info.totalBytes
+                    it.subscription.trafficExpireEpochSeconds = info.expireEpochSeconds
+                    it.subscription.trafficUpdatedMillis = System.currentTimeMillis()
+                }
                 MmkvManager.encodeSubscription(it.guid, it.subscription)
                 LogUtil.i(AppConfig.TAG, "Subscription updated: ${it.subscription.remarks}, $count configs")
                 return SubscriptionUpdateResult(

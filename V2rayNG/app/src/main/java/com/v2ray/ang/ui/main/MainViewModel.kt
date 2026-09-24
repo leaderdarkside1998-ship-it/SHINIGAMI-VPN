@@ -200,6 +200,7 @@ class MainViewModel(
     /** Applies one single-server ping result to the UI at once (no batching, no group reload). */
     private fun applySingleTestResult(groupId: String, result: RealPingResult) {
         val updates = mapOf(result.guid to result.delayMillis)
+        PingResultClock.record(updates)
         mutableServerGroupState(groupId).update { current ->
             current.copy(
                 servers = applyTestDelayResults(current.servers, updates),
@@ -241,6 +242,7 @@ class MainViewModel(
         }
         if (updates.isEmpty()) return
         if (testRequests.bulk?.id != request.id) return
+        PingResultClock.record(updates)
         mutableServerGroupState(request.groupId).update { current ->
             current.copy(
                 servers = applyTestDelayResults(current.servers, updates),
@@ -317,6 +319,7 @@ class MainViewModel(
             MainAction.SortByTestResults -> sortByTestResultsAsync()
             MainAction.TogglePingAutoHide -> togglePingAutoHide()
             MainAction.UpdateSubscriptions -> importConfigViaSub()
+            MainAction.RefreshSubscriptionUsage -> refreshSubscriptionUsage()
             MainAction.ExportAll -> exportAllAsync()
             is MainAction.SelectGroup -> subscriptionIdChanged(action.groupId)
             is MainAction.SelectServer -> updateSelectedGuid(action.guid)
@@ -500,6 +503,7 @@ class MainViewModel(
                         groups = groups,
                         selectedGroupId = selectedGroup,
                         selectedGuid = dataSource.getSelectServer(),
+                        subscriptionUsage = if (selectedGroup.isEmpty()) null else dataSource.getSubscriptionItem(selectedGroup),
                     )
                 }
                 groups.forEach { mutableServerGroupState(it.id) }
@@ -607,7 +611,37 @@ class MainViewModel(
         }
     }
 
-    private fun exportAllAsync() {
+    private fun refreshSubscriptionUsage() {
+        val subId = uiState.value.selectedGroupId
+        if (subId.isEmpty() || uiState.value.subscriptionUsageRefreshing) return
+        viewModelScope.launch(ioDispatcher) {
+            _uiState.update { it.copy(subscriptionUsageRefreshing = true) }
+            try {
+                val item = dataSource.getSubscriptionItem(subId)
+                if (item != null) {
+                    dataSource.updateConfigViaSub(SubscriptionCache(subId, item))
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (e: Exception) {
+                LogUtil.e(AppConfig.TAG, "Failed to refresh subscription usage", e)
+            } finally {
+                // Re-read from storage regardless of outcome: updateConfigViaSub persists the new
+                // traffic snapshot itself (see AngConfigManager), so this just picks up whatever
+                // the latest attempt actually landed -- unchanged on failure, fresh on success.
+                syncSubscriptionUsageState(uiState.value.selectedGroupId)
+                _uiState.update { it.copy(subscriptionUsageRefreshing = false) }
+            }
+        }
+    }
+
+    /** Reloads [MainUiState.subscriptionUsage] from storage for the given group, if any. */
+    private fun syncSubscriptionUsageState(groupId: String) {
+        val item = if (groupId.isEmpty()) null else dataSource.getSubscriptionItem(groupId)
+        _uiState.update { it.copy(subscriptionUsage = item) }
+    }
+
+
         launchLoading {
             withContext(ioDispatcher) {
                 try {
@@ -755,7 +789,12 @@ class MainViewModel(
         mutableServerGroupState(id)
         if (uiState.value.selectedGroupId != id) {
             dataSource.setSelectedSubscriptionId(id)
-            _uiState.update { it.copy(selectedGroupId = id) }
+            _uiState.update {
+                it.copy(
+                    selectedGroupId = id,
+                    subscriptionUsage = dataSource.getSubscriptionItem(id),
+                )
+            }
         }
         selectedGroupLoadJob?.cancel()
         selectedGroupLoadJob = viewModelScope.launch(ioDispatcher) {
@@ -876,6 +915,8 @@ class MainViewModel(
             return
         }
         val serverGuids = servers.map { it.guid }
+        // Every server of the group, on screen or not, starts this test with no result.
+        PingResultClock.record(serverGuids.associateWith { 0L })
         mutableServerGroupState(groupId).update { current ->
             current.copy(
                 servers = current.servers.map { server ->
@@ -934,6 +975,7 @@ class MainViewModel(
         )
         // Clear the old value so the row goes back to "testing" and a fresh result is always seen.
         val cleared = mapOf(guid to 0L)
+        PingResultClock.record(cleared)
         mutableServerGroupState(groupId).update { current ->
             current.copy(
                 servers = applyTestDelayResults(current.servers, cleared),

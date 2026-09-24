@@ -1,6 +1,5 @@
 package com.v2ray.ang.ui.main
 
-import android.os.SystemClock
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -47,6 +46,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -523,9 +523,6 @@ internal suspend fun PagerState.navigateToPageOptimized(
     }
 }
 
-/** How long a fresh ping result stays visible (5 minutes) before the slot returns to the bolt icon. */
-private const val PING_RESULT_VISIBLE_MS = 5 * 60 * 1000L
-
 /**
  * Global toggle for the ping display behavior (set from the bolt/flash-off button in the top
  * bar and persisted via [MainAction.TogglePingAutoHide]). true (default): a fresh ping result
@@ -533,20 +530,6 @@ private const val PING_RESULT_VISIBLE_MS = 5 * 60 * 1000L
  * the number stays shown permanently and the slot never reverts to the bolt icon.
  */
 internal val LocalPingAutoHide = compositionLocalOf { true }
-
-/**
- * When each server's latest ping result arrived (elapsed-realtime ms), keyed by server GUID. Kept
- * outside the composable so scrolling a card away and back, or a list rebuild, does not cut the
- * 5 minute display short.
- */
-private val pingResultArrivedAt = HashMap<String, Long>()
-
-private fun pingResultRemainingMs(guid: String): Long {
-    val arrivedAt = pingResultArrivedAt[guid] ?: return 0L
-    val remaining = PING_RESULT_VISIBLE_MS - (SystemClock.elapsedRealtime() - arrivedAt)
-    if (remaining <= 0L) pingResultArrivedAt.remove(guid)
-    return remaining.coerceAtLeast(0L)
-}
 
 /** Safety net: stop the "testing" pulse if a result never arrives (cancelled / failed to start). */
 private const val PING_TEST_TIMEOUT_MS = 20000L
@@ -565,44 +548,45 @@ private fun PingSlot(
 ) {
     var testing by remember { mutableStateOf(false) }
     val pingAutoHide = LocalPingAutoHide.current
-    var showResult by remember(guid) {
-        mutableStateOf(delayMillis != 0L && (!pingAutoHide || pingResultRemainingMs(guid) > 0L))
-    }
-    var previous by remember(guid) { mutableLongStateOf(delayMillis) }
 
-    // A result "arrives" when the value goes from cleared (0) to something (every single or group
-    // test clears it first). Values stored before this session stay hidden behind the bolt. With
-    // auto-hide on, the result is shown for whatever is left of its 5 minutes, then the bolt
-    // returns; with auto-hide off, the result is shown permanently and the bolt never returns.
-    LaunchedEffect(delayMillis, pingAutoHide) {
-        val arrived = delayMillis != 0L && previous == 0L
-        previous = delayMillis
-        if (delayMillis == 0L) {
-            pingResultArrivedAt.remove(guid)
-            showResult = false
-            return@LaunchedEffect
-        }
-        if (arrived) {
-            testing = false
-            pingResultArrivedAt[guid] = SystemClock.elapsedRealtime()
-        }
-        if (!pingAutoHide) {
-            showResult = true
-            return@LaunchedEffect
-        }
-        val remaining = pingResultRemainingMs(guid)
-        if (remaining <= 0L) {
-            showResult = false
-            return@LaunchedEffect
-        }
-        showResult = true
-        delay(remaining)
-        showResult = false
+    // The arrival time of a result is stamped by the ViewModel when the result is applied, for
+    // every server whether or not its card is on screen ([PingResultClock]). Here it is only
+    // filled in for a value that has no stamp yet (one restored from storage at app start), so
+    // that the 5-minute countdown below has a starting point.
+    LaunchedEffect(guid, delayMillis) {
+        if (delayMillis != 0L) PingResultClock.recordIfAbsent(guid)
+        testing = false
     }
     LaunchedEffect(testing) {
         if (testing) {
             delay(PING_TEST_TIMEOUT_MS)
             testing = false
+        }
+    }
+
+    // "now" only needs to tick while auto-hide is on and a result is waiting to expire, so the
+    // countdown actually counts down instead of being computed once and frozen.
+    var now by remember { mutableLongStateOf(PingResultClock.now()) }
+    LaunchedEffect(pingAutoHide, delayMillis, guid) {
+        if (!pingAutoHide || delayMillis == 0L) return@LaunchedEffect
+        while (true) {
+            now = PingResultClock.now()
+            delay(1000)
+        }
+    }
+
+    // Single source of truth for visibility, recomputed straight from pingAutoHide every time it
+    // changes. With auto-hide off this is unconditionally true the moment a result exists -
+    // nothing else has to happen first, so the power/flash button takes effect immediately and
+    // even reveals a result that was already stored before auto-hide was turned off.
+    val showResult by remember(guid, delayMillis, pingAutoHide) {
+        derivedStateOf {
+            !testing && PingResultClock.isResultVisible(
+                delayMillis = delayMillis,
+                pingAutoHide = pingAutoHide,
+                arrivedAt = PingResultClock.arrivedAt(guid),
+                now = now,
+            )
         }
     }
 
@@ -623,7 +607,6 @@ private fun PingSlot(
                 indication = null
             ) {
                 testing = true
-                showResult = false
                 onTest()
             },
         contentAlignment = Alignment.CenterEnd

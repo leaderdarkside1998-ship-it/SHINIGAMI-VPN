@@ -3,7 +3,6 @@ package com.v2ray.ang.core
 import android.content.Context
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
-import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -142,7 +141,11 @@ object BoostEngine {
 
     private fun switchTo(guid: String) {
         MmkvManager.setSelectServer(guid)
-        SettingsChangeManager.makeRestartService()
+        // Reload the live core directly: BoostEngine runs in the same :daemon process as
+        // CoreServiceManager, so this actually rebuilds the running tunnel against the new
+        // selection. SettingsChangeManager.makeRestartService() would silently do nothing here --
+        // see the comment on CoreServiceManager.reloadForRouteSwitch().
+        CoreServiceManager.reloadForRouteSwitch()
     }
 
     private fun publish(

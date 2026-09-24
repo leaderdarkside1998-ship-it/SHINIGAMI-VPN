@@ -32,6 +32,7 @@ import com.v2ray.ang.service.DialerWebviewService
 import com.v2ray.ang.service.NetworkMonitor
 import com.v2ray.ang.util.LogUtil
 import com.v2ray.ang.util.Utils
+import com.v2ray.ang.util.newForegroundPriorityDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +59,10 @@ object CoreServiceManager {
     private var processFinder: XrayProcessFinder? = null
     private var browserDialer: IDialerService? = null
     private var networkMonitor: NetworkMonitor? = null
-    private val connectionTestScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    // Foreground-priority thread (not the shared Dispatchers.IO pool) so a CPU-heavy foreground
+    // app -- typically a game, especially under Select Game / exclusive mode -- can't starve the
+    // ping test's own request and make it look stalled or inaccurate.
+    private val connectionTestScope = CoroutineScope(SupervisorJob() + newForegroundPriorityDispatcher("ConnectionTest"))
 
     /** Owns the Aether warm-up wait; cancelled on every start and stop so a stale wait cannot report. */
     private val aetherScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -384,6 +388,26 @@ object CoreServiceManager {
      *
      * @return True if the core is running again.
      */
+    /**
+     * Reloads the running core against whatever `MmkvManager.getSelectServer()` currently points
+     * at, in place (same VPN interface, same notification) -- exactly what a network handover
+     * reload does. Public entry point for [GamingEngine] and [BoostEngine]: those engines already
+     * run in this same `:daemon` process, so this is a direct, same-process call. They used to go
+     * through `SettingsChangeManager.makeRestartService()`, but that flag is only ever consumed by
+     * `MainActivity`'s Settings-screen-return callback in the main UI process; `SettingsChangeManager`
+     * is a plain singleton `object`; a different process gets its own separate instance, so a flag set
+     * here was never visible there. The practical effect was silent: `MmkvManager.setSelectServer()`
+     * changed which route counted as "selected" (so it showed as connected and pinged fine), but the
+     * live core kept running the old route's config until something else (a network handover, or
+     * clearing the app's storage, which kills this process and forces a genuinely fresh start) forced
+     * a reload -- i.e. traffic stopped being routed through anything the UI could see or fix by
+     * toggling the service off and on, since that reads the same already-updated selected guid and
+     * looked like a no-op.
+     *
+     * @return True if the core is running again with the current selection.
+     */
+    fun reloadForRouteSwitch(): Boolean = reloadCore()
+
     private fun reloadCore(): Boolean {
         if (isReloading) return false
         val service = getService() ?: return false
@@ -444,21 +468,19 @@ object CoreServiceManager {
     }
 
     /**
-     * Picks the saved server with the best (lowest) last-known real-ping result, among all
-     * saved servers except [currentGuid]. Servers never tested or whose last test failed
-     * (testDelayMillis <= 0) are not considered. Returns null when no other tested-and-reachable
-     * server exists, so the caller falls back to reconnecting the current server.
+     * Picks the server the "Switch server" action moves to: the next saved server after
+     * [currentGuid] in list order, wrapping around, so repeated presses visit every server one
+     * after another. Ping history is deliberately ignored -- the previous "lowest last-known
+     * ping" pick only ever alternated between the two or three best-tested servers, and a
+     * server that tested badly outside a game can still be the right one inside it. Servers that
+     * cannot be started (missing or unusable config) are skipped, since starting one would fail
+     * and leave the VPN stopped. Returns null when no other startable server exists, so the
+     * caller falls back to reconnecting the current server.
      */
-    private fun findBestAlternativeServerGuid(currentGuid: String?): String? {
-        return MmkvManager.decodeAllServerList()
-            .asSequence()
-            .filter { it != currentGuid }
-            .mapNotNull { guid ->
-                val delay = MmkvManager.decodeServerAffiliationInfo(guid)?.testDelayMillis ?: 0L
-                if (delay > 0L) guid to delay else null
-            }
-            .minByOrNull { it.second }
-            ?.first
+    private fun findNextServerGuid(currentGuid: String?): String? {
+        return ServerSwitchOrder.next(MmkvManager.decodeAllServerList(), currentGuid) { guid ->
+            MmkvManager.decodeServerConfig(guid)?.let { LauncherManager.hasUsableServer(it) } == true
+        }
     }
 
     /**
@@ -505,13 +527,10 @@ object CoreServiceManager {
             }
 
             ensureActive()
-            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
-            val result = ConnectionTestResult(
-                delayMillis = time,
-                errorMessage = errorStr,
-                country = endpoint?.country,
-                ipAddress = endpoint?.ipAddress,
-            )
+            // Publish the ping to the notification as soon as it is measured. The IP lookup below
+            // is a separate blocking request (up to its 5 s timeout, and slower still while a game
+            // is saturating the link); it feeds only the app screen, so the notification must not
+            // wait for it.
             withContext(Dispatchers.Main.immediate) {
                 if (isRunning()) {
                     NotificationManager.setPingLine(
@@ -521,6 +540,19 @@ object CoreServiceManager {
                             service.getString(R.string.notification_ping_failed)
                         }
                     )
+                }
+            }
+
+            ensureActive()
+            val endpoint = if (time >= 0) SpeedtestManager.getRemoteIPInfo() else null
+            val result = ConnectionTestResult(
+                delayMillis = time,
+                errorMessage = errorStr,
+                country = endpoint?.country,
+                ipAddress = endpoint?.ipAddress,
+            )
+            withContext(Dispatchers.Main.immediate) {
+                if (isRunning()) {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_RESULT, result, requestId)
                 } else {
                     MessageHelper.sendMsg2UI(service, AppConfig.MSG_MEASURE_DELAY_CANCEL, "", requestId)
@@ -686,17 +718,17 @@ object CoreServiceManager {
                 }
 
                 AppConfig.MSG_STATE_SWITCH_BEST -> {
-                    LogUtil.i(AppConfig.TAG, "StartCore-Manager: Switch to best-ping server")
+                    LogUtil.i(AppConfig.TAG, "StartCore-Manager: Switch to next server")
                     if (isOrderedBroadcast) resultCode = Activity.RESULT_OK
 
                     val currentGuid = MmkvManager.getSelectServer()
-                    val bestGuid = findBestAlternativeServerGuid(currentGuid)
+                    val nextGuid = findNextServerGuid(currentGuid)
 
                     val pendingResult = goAsync()
                     CoroutineScope(Dispatchers.Default).launch {
                         try {
-                            if (bestGuid != null) {
-                                MmkvManager.setSelectServer(bestGuid)
+                            if (nextGuid != null) {
+                                MmkvManager.setSelectServer(nextGuid)
                             }
                             serviceControl.stopService()
                             delay(500L)

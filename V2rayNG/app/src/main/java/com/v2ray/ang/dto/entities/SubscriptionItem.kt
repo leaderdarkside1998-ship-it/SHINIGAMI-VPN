@@ -16,5 +16,17 @@ data class SubscriptionItem(
     var requestHeaders: String? = null,
     var overrideAddress: String? = null,
     var overridePort: Int? = null,
+    /**
+     * Traffic quota reported by the subscription server's own `subscription-userinfo` response
+     * header (the de-facto standard most subscription panels send), captured the last time this
+     * subscription was updated. Null fields mean the server didn't report that value -- never a
+     * guess. `trafficUpdatedMillis` is when this snapshot was captured, separate from
+     * [lastUpdated] which also covers subscriptions with no such header at all.
+     */
+    var trafficUploadBytes: Long? = null,
+    var trafficDownloadBytes: Long? = null,
+    var trafficTotalBytes: Long? = null,
+    var trafficExpireEpochSeconds: Long? = null,
+    var trafficUpdatedMillis: Long? = null,
 )
 

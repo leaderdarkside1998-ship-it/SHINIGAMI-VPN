@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import com.v2ray.ang.dto.ConnectionTestResult
 import com.v2ray.ang.dto.GroupMapItem
 import com.v2ray.ang.dto.LocateTarget
+import com.v2ray.ang.dto.entities.SubscriptionItem
 
 /** Locale-neutral state formatted only when it reaches the main UI. */
 sealed interface MainStatus {
@@ -31,7 +32,11 @@ data class MainUiState(
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = true,
     val pingAutoHide: Boolean = true,
-    val shareQRCodeBitmap: android.graphics.Bitmap? = null
+    val shareQRCodeBitmap: android.graphics.Bitmap? = null,
+    /** The selected group's subscription record, including whatever traffic-quota fields its
+     * last update captured. Null while no group is selected, or the group has none on file yet. */
+    val subscriptionUsage: SubscriptionItem? = null,
+    val subscriptionUsageRefreshing: Boolean = false,
 )
 
 /**
@@ -51,6 +56,7 @@ sealed interface MainAction {
     data object SortByTestResults : MainAction
     data object TogglePingAutoHide : MainAction
     data object UpdateSubscriptions : MainAction
+    data object RefreshSubscriptionUsage : MainAction
     data object ExportAll : MainAction
 
     data object ImportQRcode : MainAction

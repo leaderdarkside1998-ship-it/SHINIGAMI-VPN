@@ -550,6 +550,9 @@
     <string name="acc_open_menu">নেভিগেশন মেনু খুলুন</string>
     <string name="acc_shinigami_ai">SHINIGAMI AI খুলুন</string>
     <string name="shinigami_ai_button_label">AI</string>
+    <string name="subscription_usage_no_data">ডেটা ব্যবহার দেখতে রিফ্রেশ চাপুন</string>
+    <string name="subscription_usage_expire">মেয়াদ শেষ %1$s</string>
+    <string name="acc_refresh_subscription_usage">ডেটা ব্যবহার রিফ্রেশ করুন</string>
     <string name="acc_edit">সম্পাদনা করুন</string>
     <string name="acc_delete">মুছুন</string>
     <string name="acc_save">সংরক্ষণ করুন</string>

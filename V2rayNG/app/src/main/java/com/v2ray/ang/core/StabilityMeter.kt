@@ -52,6 +52,18 @@ object StabilityMeter {
             if (index != samples - 1) delay(spacingMillis)
         }
 
+        return summarize(guid, results)
+    }
+
+    /**
+     * Turns individually-timed probe results for [guid] into [RouteMetrics]. A negative entry is
+     * a failed probe. An empty list (never probed) and an all-failed list both give an
+     * unmeasurable result, but only the latter reports 100% loss. Pure, so callers that collect
+     * probe results some other way (for example from the test service process) share the exact
+     * same maths as [measure].
+     */
+    fun summarize(guid: String, results: List<Long>): RouteMetrics {
+        if (results.isEmpty()) return RouteMetrics(guid)
         val successes = results.filter { it >= 0 }
         val lossPercent = ((results.size - successes.size) * 100) / results.size
         if (successes.isEmpty()) {

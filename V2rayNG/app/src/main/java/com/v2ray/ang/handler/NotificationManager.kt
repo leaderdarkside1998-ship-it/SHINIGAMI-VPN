@@ -19,8 +19,8 @@ import com.v2ray.ang.extension.delay
 import com.v2ray.ang.extension.toSpeedString
 import com.v2ray.ang.ui.main.MainActivity
 import com.v2ray.ang.util.LogUtil
+import com.v2ray.ang.util.newForegroundPriorityDispatcher
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -42,6 +42,11 @@ object NotificationManager {
     private var statusLine: String? = null
     private var pingLine: String? = null
     private var lastContentText: String? = null
+
+    // Created once and reused for the object's lifetime (mirrors CoreServiceManager's
+    // connectionTestScope) -- start/stopSpeedNotification can be called many times across
+    // connect/disconnect cycles, and a fresh dispatcher (and its thread) per call would leak.
+    private val speedNotificationScope = CoroutineScope(newForegroundPriorityDispatcher("SpeedNotification"))
 
     /**
      * Shows a line above the traffic text while the running profile cannot carry traffic yet;
@@ -85,7 +90,10 @@ object NotificationManager {
 
         var lastZeroSpeed = false
 
-        speedNotificationJob = CoroutineScope(Dispatchers.IO).launch {
+        // Foreground-priority thread (not the shared Dispatchers.IO pool) so this stays
+        // responsive even while a CPU-heavy foreground app -- a game, especially under Select
+        // Game / exclusive mode -- would otherwise starve a background-priority thread.
+        speedNotificationJob = speedNotificationScope.launch {
             while (isActive) {
                 lastZeroSpeed = updateSpeedNotificationOnce(lastZeroSpeed)
                 delay(QUERY_INTERVAL_MS)
@@ -110,19 +118,13 @@ object NotificationManager {
         val startMainIntent = Intent(service, MainActivity::class.java)
         val contentPendingIntent = PendingIntent.getActivity(service, NOTIFICATION_PENDING_INTENT_CONTENT, startMainIntent, flags)
 
-        val stopV2RayIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
-        stopV2RayIntent.`package` = AppConfig.ANG_PACKAGE
-        stopV2RayIntent.putExtra("key", AppConfig.MSG_STATE_STOP)
+        val stopV2RayIntent = serviceActionIntent(AppConfig.MSG_STATE_STOP)
         val stopV2RayPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_STOP_V2RAY, stopV2RayIntent, flags)
 
-        val switchBestIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
-        switchBestIntent.`package` = AppConfig.ANG_PACKAGE
-        switchBestIntent.putExtra("key", AppConfig.MSG_STATE_SWITCH_BEST)
+        val switchBestIntent = serviceActionIntent(AppConfig.MSG_STATE_SWITCH_BEST)
         val switchBestPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_SWITCH_BEST, switchBestIntent, flags)
 
-        val testPingIntent = Intent(AppConfig.BROADCAST_ACTION_SERVICE)
-        testPingIntent.`package` = AppConfig.ANG_PACKAGE
-        testPingIntent.putExtra("key", AppConfig.MSG_MEASURE_DELAY)
+        val testPingIntent = serviceActionIntent(AppConfig.MSG_MEASURE_DELAY)
         val testPingPendingIntent = PendingIntent.getBroadcast(service, NOTIFICATION_PENDING_INTENT_TEST_PING, testPingIntent, flags)
 
         val channelId =
@@ -164,6 +166,23 @@ object NotificationManager {
 
         service.startForeground(NOTIFICATION_ID, mBuilder?.build())
     }
+
+    /**
+     * Builds the app-internal broadcast a notification action sends to the service receiver.
+     *
+     * [Intent.FLAG_RECEIVER_FOREGROUND] puts the broadcast on the system's foreground queue.
+     * Without it the action goes through the background queue, which the system drains late
+     * while a CPU-heavy foreground app (a game) is running, so a tap on Stop / Switch / Test ping
+     * seems to do nothing for seconds. Platform boundary: Android's ActivityManager broadcast
+     * queues (foreground vs. background). Remove this flag only if the actions stop being
+     * broadcasts.
+     */
+    private fun serviceActionIntent(key: Int): Intent =
+        Intent(AppConfig.BROADCAST_ACTION_SERVICE).apply {
+            `package` = AppConfig.ANG_PACKAGE
+            addFlags(Intent.FLAG_RECEIVER_FOREGROUND)
+            putExtra("key", key)
+        }
 
     /**
      * Fulfills or refreshes the foreground-service contract before a start command can

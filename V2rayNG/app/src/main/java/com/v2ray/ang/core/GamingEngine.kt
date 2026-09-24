@@ -3,7 +3,6 @@ package com.v2ray.ang.core
 import android.content.Context
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.handler.MmkvManager
-import com.v2ray.ang.handler.SettingsChangeManager
 import com.v2ray.ang.util.LogUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -82,8 +81,8 @@ object GamingEngine {
         _diagnostics.value = OptimizeDiagnostics.idle("GAMING")
         MmkvManager.removeDiagnosticsSnapshot(AppConfig.DIAGNOSTICS_GAMING)
         // Note: pendingRollback deliberately survives stop(), since switchTo() itself triggers a
-        // core restart (stop -> start) via SettingsChangeManager.makeRestartService(); clearing it
-        // here would erase the rollback check before the next tick() ever gets to use it.
+        // real in-place core reload (CoreServiceManager.reloadForRouteSwitch()); clearing it here
+        // would erase the rollback check before the next tick() ever gets to use it.
     }
 
     fun isEnabled(): Boolean = MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_ENABLED, false)
@@ -172,7 +171,11 @@ object GamingEngine {
 
     private fun switchTo(guid: String) {
         MmkvManager.setSelectServer(guid)
-        SettingsChangeManager.makeRestartService()
+        // Reload the live core directly: GamingEngine runs in the same :daemon process as
+        // CoreServiceManager, so this actually rebuilds the running tunnel against the new
+        // selection. SettingsChangeManager.makeRestartService() would silently do nothing here --
+        // see the comment on CoreServiceManager.reloadForRouteSwitch().
+        CoreServiceManager.reloadForRouteSwitch()
     }
 
     private fun isTurkeyRoute(guid: String): Boolean {

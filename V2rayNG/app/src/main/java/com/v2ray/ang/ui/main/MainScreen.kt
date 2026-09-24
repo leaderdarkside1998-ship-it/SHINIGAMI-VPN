@@ -34,6 +34,7 @@ import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.ui.compose.BuyServersBanner
 import com.v2ray.ang.ui.compose.LocalDarkTheme
 import com.v2ray.ang.ui.compose.QRCodeDialog
+import com.v2ray.ang.ui.compose.SubscriptionUsageCard
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
@@ -206,6 +207,11 @@ fun MainScreen(
                     BuyServersBanner(
                         text = stringResource(R.string.banner_buy_tunneled_servers),
                         telegramUrl = "https://t.me/IDSHINIGAMI"
+                    )
+                    SubscriptionUsageCard(
+                        usage = uiState.subscriptionUsage,
+                        refreshing = uiState.subscriptionUsageRefreshing,
+                        onRefresh = { onAction(MainAction.RefreshSubscriptionUsage) }
                     )
                     if (groups.size > 1) {
                         GroupTabBar(

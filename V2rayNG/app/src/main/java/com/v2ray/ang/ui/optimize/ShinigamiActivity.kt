@@ -19,11 +19,15 @@ class ShinigamiActivity : BaseComponentActivity() {
     override fun ScreenContent() {
         val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
         val result by viewModel.result.collectAsStateWithLifecycle()
+        val terminal by viewModel.terminal.collectAsStateWithLifecycle()
+        val progress by viewModel.progress.collectAsStateWithLifecycle()
         val chatText by viewModel.chatText.collectAsStateWithLifecycle()
 
         ShinigamiScreen(
             isLoading = isLoading,
             result = result,
+            terminal = terminal,
+            progress = progress,
             chatText = chatText,
             onBackClick = { finish() },
             onPresetClick = { preset -> viewModel.analyze(this, preset) },
@@ -33,7 +37,8 @@ class ShinigamiActivity : BaseComponentActivity() {
                 viewModel.connect(this, guid)
                 finish()
             },
-            onNewAnalysis = { viewModel.clearResult() }
+            onNewAnalysis = { viewModel.clearResult() },
+            onCancelAnalysis = { viewModel.cancelAnalysis() }
         )
     }
 }
