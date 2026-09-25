@@ -1,13 +1,8 @@
 package com.v2ray.ang.ui.main
 
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -54,12 +49,10 @@ import com.v2ray.ang.R
 import kotlinx.coroutines.delay
 
 /**
- * Bottom area of the main screen. Three clearly separate pieces, stacked, never overlapping:
+ * Bottom area of the main screen. Two clearly separate pieces, stacked, never overlapping:
  *
- * 1. A centered connection headline ("Connected"/"Not connected") that reads like a proper VPN
- *    app status, not just a technical log line.
- * 2. A floating controls row (AI button + the power control) that sits above everything else.
- * 3. The status/test bar underneath -- a standalone 3D card. Tapping it tests the current
+ * 1. A floating controls row (AI button + the power control) that sits above everything else.
+ * 2. The status/test bar underneath -- a standalone 3D card. Tapping it tests the current
  *    server, same as before; it is purely a status strip, the power control never sits inside
  *    or on top of it any more.
  */
@@ -77,12 +70,10 @@ fun MainBottomBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        ConnectionHeadline(isRunning = isRunning)
-
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = ControlsEndPadding, vertical = 6.dp),
+                .padding(horizontal = ControlsEndPadding, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
@@ -105,46 +96,7 @@ fun MainBottomBar(
     }
 }
 
-/**
- * Big, centered "Connected" / "Not connected" headline shown above the power control, in the
- * app accent color while connected and a muted tone otherwise -- the single-glance status cue
- * every mainstream VPN app leads with, distinct from the small tap-to-test strip below it.
- */
-@Composable
-private fun ConnectionHeadline(isRunning: Boolean) {
-    val label = stringResource(
-        if (isRunning) R.string.connection_connected else R.string.connection_not_connected
-    )
-    val color = if (isRunning) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 14.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(9.dp)
-                .clip(CircleShape)
-                .background(if (isRunning) color else MaterialTheme.colorScheme.outlineVariant)
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            text = label,
-            color = color,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.2.sp
-        )
-    }
-}
-
-private val ControlFabSize = 76.dp
+private val ControlFabSize = 56.dp
 private val ControlsEndPadding = 16.dp
 private val AiButtonSize = 34.dp
 private val AiButtonSpacing = 12.dp
@@ -192,11 +144,7 @@ private fun AiCircleButton(onClick: () -> Unit) {
     }
 }
 
-/**
- * The start/connect control: a round, glossy, gradient-filled button -- a proper 3D power key.
- * Sized and haloed to read as the screen's main action (the way NordVPN/ExpressVPN-style apps
- * anchor around one big connect button), with a slow breathing halo while idle inviting the tap.
- */
+/** The start/connect control: a round, glossy, gradient-filled button -- a proper 3D power key. */
 @Composable
 private fun PowerFab(onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
@@ -208,52 +156,25 @@ private fun PowerFab(onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "powerFabPressScale"
     )
-    val haloTransition = rememberInfiniteTransition(label = "powerFabHalo")
-    val haloScale by haloTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.22f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1600),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "powerFabHaloScale"
-    )
-    val haloAlpha by haloTransition.animateFloat(
-        initialValue = 0.28f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1600),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "powerFabHaloAlpha"
-    )
-    Box(contentAlignment = Alignment.Center) {
-        Box(
-            modifier = Modifier
-                .size(ControlFabSize)
-                .scale(haloScale)
-                .clip(CircleShape)
-                .background(primary.copy(alpha = haloAlpha))
-        )
-        Box(
-            modifier = Modifier
-                .size(ControlFabSize)
-                .scale(pressScale)
-                .shadow(
-                    elevation = 14.dp,
-                    shape = CircleShape,
-                    ambientColor = primary.copy(alpha = 0.55f),
-                    spotColor = primary.copy(alpha = 0.65f)
-                )
-                .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(primary, secondary)))
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                ),
-            contentAlignment = Alignment.Center
-        ) {
+    Box(
+        modifier = Modifier
+            .size(ControlFabSize)
+            .scale(pressScale)
+            .shadow(
+                elevation = 10.dp,
+                shape = CircleShape,
+                ambientColor = primary.copy(alpha = 0.55f),
+                spotColor = primary.copy(alpha = 0.65f)
+            )
+            .clip(CircleShape)
+            .background(Brush.linearGradient(listOf(primary, secondary)))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
         // Glossy top highlight for a rounded, three-dimensional key rather than a flat disc.
         Box(
             modifier = Modifier
@@ -269,9 +190,8 @@ private fun PowerFab(onClick: () -> Unit) {
             painter = painterResource(R.drawable.ic_play_24dp),
             contentDescription = stringResource(R.string.acc_start),
             tint = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.size(34.dp)
+            modifier = Modifier.size(28.dp)
         )
-        }
     }
 }
 
