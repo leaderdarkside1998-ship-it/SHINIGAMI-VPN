@@ -66,8 +66,8 @@ import com.v2ray.ang.shinigami.ShinigamiLogLevel
 import com.v2ray.ang.shinigami.ShinigamiLogLine
 import com.v2ray.ang.shinigami.ShinigamiPreset
 import com.v2ray.ang.shinigami.ShinigamiServerScore
-import com.v2ray.ang.ui.compose.AnimatedShinigamiIcon
 import com.v2ray.ang.ui.compose.AppTopBar
+import com.v2ray.ang.ui.compose.RotatingLoadingIcon
 import com.v2ray.ang.ui.compose.NavigationBarsBottomPadding
 
 private data class PresetOption(
@@ -149,7 +149,7 @@ private fun AnalysisContent(terminal: List<ShinigamiLogLine>, progress: Float, o
             .padding(NavigationBarsBottomPadding())
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            AnimatedShinigamiIcon(iconSize = 28.dp)
+            RotatingLoadingIcon(iconSize = 28.dp)
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = stringResource(R.string.shinigami_analyzing),
@@ -568,8 +568,6 @@ private fun ExplanationCard(explanation: String) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
         Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.Top) {
-            AnimatedShinigamiIcon(iconSize = 22.dp)
-            Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = explanation,
                 style = MaterialTheme.typography.bodyMedium,
