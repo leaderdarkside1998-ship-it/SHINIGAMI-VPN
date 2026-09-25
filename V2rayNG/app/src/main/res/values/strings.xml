@@ -413,6 +413,15 @@
     <string name="sub_setting_override_tip">Leave empty to keep the value from the subscription</string>
     <string name="sub_setting_enable">Enable update</string>
     <string name="sub_auto_update">Enable automatic update</string>
+    <string name="sub_auto_update_interval_15m">15 min</string>
+    <string name="sub_auto_update_interval_1h">1 hour</string>
+    <string name="sub_auto_update_interval_5h">5 hours</string>
+    <string name="sub_auto_update_interval_12h">12 hours</string>
+    <string name="sub_auto_update_interval_24h">24 hours</string>
+    <string name="sub_auto_update_interval_custom">Custom</string>
+    <string name="sub_auto_update_interval_custom_title">Custom update interval</string>
+    <string name="sub_auto_update_interval_custom_label">Minutes (minimum 15)</string>
+    <string name="acc_expand_auto_update">Auto-update options</string>
     <string name="sub_allow_insecure_url">Allow insecure HTTP address</string>
     <string name="sub_setting_pre_profile">Entry proxy</string>
     <string name="sub_setting_next_profile">Exit proxy</string>

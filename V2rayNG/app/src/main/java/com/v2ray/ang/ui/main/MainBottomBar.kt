@@ -9,6 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
@@ -41,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
@@ -51,6 +53,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
+import com.v2ray.ang.ui.compose.darken
+import com.v2ray.ang.ui.compose.lighten
 import kotlinx.coroutines.delay
 
 /**
@@ -82,7 +86,7 @@ fun MainBottomBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = ControlsEndPadding, vertical = 6.dp),
+                .padding(horizontal = ControlsEndPadding, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.End
         ) {
@@ -123,21 +127,21 @@ private fun ConnectionHeadline(isRunning: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 14.dp, bottom = 2.dp),
+            .padding(top = 8.dp, bottom = 2.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(9.dp)
+                .size(8.dp)
                 .clip(CircleShape)
                 .background(if (isRunning) color else MaterialTheme.colorScheme.outlineVariant)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(7.dp))
         Text(
             text = label,
             color = color,
-            style = MaterialTheme.typography.titleMedium,
+            style = MaterialTheme.typography.titleSmall,
             fontWeight = FontWeight.Bold,
             letterSpacing = 0.2.sp
         )
@@ -145,9 +149,9 @@ private fun ConnectionHeadline(isRunning: Boolean) {
 }
 
 private val ControlFabSize = 76.dp
-private val ControlsEndPadding = 16.dp
-private val AiButtonSize = 34.dp
-private val AiButtonSpacing = 12.dp
+private val ControlsEndPadding = 14.dp
+private val AiButtonSize = 30.dp
+private val AiButtonSpacing = 10.dp
 
 /** Small round button, labeled "AI", that opens the SHINIGAMI AI assistant screen. */
 @Composable
@@ -167,13 +171,20 @@ private fun AiCircleButton(onClick: () -> Unit) {
             .size(AiButtonSize)
             .scale(pressScale)
             .shadow(
-                elevation = 6.dp,
+                elevation = 5.dp,
                 shape = CircleShape,
                 ambientColor = secondary.copy(alpha = 0.5f),
                 spotColor = secondary.copy(alpha = 0.6f)
             )
             .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(secondary, tertiary)))
+            .background(Brush.linearGradient(listOf(lighten(secondary, 0.12f), tertiary)))
+            .border(
+                width = 0.7.dp,
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.18f))
+                ),
+                shape = CircleShape
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -182,12 +193,25 @@ private fun AiCircleButton(onClick: () -> Unit) {
             .semantics { contentDescription = aiDescription },
         contentAlignment = Alignment.Center
     ) {
+        // Tight highlight sheen, top-left, for the same glossy finish as the other action dots.
+        Box(
+            modifier = Modifier
+                .size(AiButtonSize)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(Color.White.copy(alpha = 0.30f), Color.Transparent),
+                        center = Offset(AiButtonSize.value * 0.30f, AiButtonSize.value * 0.26f),
+                        radius = AiButtonSize.value * 0.45f
+                    )
+                )
+        )
         Text(
             text = stringResource(R.string.shinigami_ai_button_label),
             color = MaterialTheme.colorScheme.onSecondary,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 11.sp
+            fontSize = 9.5.sp
         )
     }
 }
@@ -292,34 +316,42 @@ private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "stopPillPressScale"
     )
+    val shape = RoundedCornerShape(20.dp)
     Box(
         modifier = Modifier
             .scale(pressScale)
             .shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(24.dp),
+                elevation = 6.dp,
+                shape = shape,
                 ambientColor = primary.copy(alpha = 0.45f),
                 spotColor = primary.copy(alpha = 0.55f)
             )
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(primary, secondary)))
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(lighten(primary, 0.08f), secondary)))
+            .border(
+                width = 0.7.dp,
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.4f), Color.Black.copy(alpha = 0.15f))
+                ),
+                shape = shape
+            )
     ) {
         Row(
             modifier = Modifier
-                .height(48.dp)
+                .height(40.dp)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = onClick
                 )
-                .padding(horizontal = 20.dp)
+                .padding(horizontal = 16.dp)
                 .semantics { contentDescription = stopDescription },
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(13.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(15.dp)
+                    .size(11.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(onPillColor)
             )
@@ -346,8 +378,9 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifi
     Text(
         text = "%02d:%02d:%02d".format(h, m, sec),
         color = color,
-        fontSize = 16.sp,
-        letterSpacing = 0.5.sp,
+        fontSize = 13.5.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.4.sp,
         maxLines = 1,
         modifier = modifier
     )
@@ -357,7 +390,7 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifi
  * Standalone status/test card, fully separate from the floating controls above it. Tapping
  * anywhere on it tests the currently selected server. Styled as a lifted, slightly rounded
  * 3D card rather than a flush full-width strip, with a small bolt icon marking it as the
- * tap-to-test row.
+ * tap-to-test row, a soft top sheen, and a hairline rim for a more refined, less flat finish.
  */
 @Composable
 private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
@@ -368,25 +401,28 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "testStatusBarPressScale"
     )
+    val shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
+    val top = lighten(MaterialTheme.colorScheme.surfaceContainerHigh, 0.06f)
+    val bottom = darken(MaterialTheme.colorScheme.surfaceContainer, 0.04f)
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp)
             .scale(pressScale)
             .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-                ambientColor = Color.Black.copy(alpha = 0.18f),
-                spotColor = Color.Black.copy(alpha = 0.18f)
+                elevation = 5.dp,
+                shape = shape,
+                ambientColor = Color.Black.copy(alpha = 0.2f),
+                spotColor = Color.Black.copy(alpha = 0.2f)
             )
-            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                        MaterialTheme.colorScheme.surfaceContainer
-                    )
-                )
+            .clip(shape)
+            .background(Brush.verticalGradient(listOf(top, bottom)))
+            .border(
+                width = 0.6.dp,
+                brush = Brush.verticalGradient(
+                    listOf(Color.White.copy(alpha = 0.12f), Color.Transparent)
+                ),
+                shape = shape
             )
             .clickable(
                 interactionSource = interactionSource,
@@ -397,14 +433,14 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 18.dp),
+                .height(48.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(24.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
                 contentAlignment = Alignment.Center
@@ -413,12 +449,12 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
                     painter = painterResource(R.drawable.ic_bolt_24dp),
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
             Text(
                 text = displayText,
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 modifier = Modifier

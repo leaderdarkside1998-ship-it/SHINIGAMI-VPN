@@ -353,7 +353,7 @@ private fun ServerListItem(
     // Glossy 3D card: gradient body + drop shadow + accent glow ring when selected —
     // same content and layout as before, just raised off the page instead of flat.
     val colors = MaterialTheme.colorScheme
-    val cardShape = RoundedCornerShape(14.dp)
+    val cardShape = RoundedCornerShape(12.dp)
     val baseSurface = colors.surfaceContainerHigh
     val topTint by animateColorAsState(
         targetValue = if (isSelected) lighten(colors.primary, 0.25f) else lighten(baseSurface, 0.16f),
@@ -370,7 +370,7 @@ private fun ServerListItem(
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 6.dp, vertical = 3.dp)
             .graphicsLayer {
                 alpha = entrance.value
                 val scale = 0.94f + entrance.value * 0.06f
@@ -378,7 +378,7 @@ private fun ServerListItem(
                 scaleY = scale
             }
             .shadow(
-                elevation = if (isSelected) 10.dp else 6.dp,
+                elevation = if (isSelected) 7.dp else 4.dp,
                 shape = cardShape,
                 ambientColor = Color.Black.copy(alpha = 0.3f),
                 spotColor = if (isSelected) colors.primary.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.4f)
@@ -401,13 +401,13 @@ private fun ServerListItem(
             // Slim selection line (2dp, rounded ends) at the leading edge.
             Box(
                 Modifier
-                    .width(9.dp)
+                    .width(7.dp)
                     .fillMaxHeight()
             ) {
                 if (isSelected) {
                     Box(
                         Modifier
-                            .padding(start = 5.dp, top = 13.dp, bottom = 13.dp)
+                            .padding(start = 4.dp, top = 10.dp, bottom = 10.dp)
                             .width(2.dp)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(1.dp))
@@ -419,15 +419,15 @@ private fun ServerListItem(
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(start = 4.dp, end = 10.dp, top = 8.dp, bottom = 8.dp)
+                    .padding(start = 3.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         row.remarks,
                         Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 14.sp,
-                            lineHeight = 20.sp,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
                             fontWeight = FontWeight.Light,
                             letterSpacing = 0.1.sp,
                             lineBreak = LineBreak.Paragraph
@@ -438,74 +438,74 @@ private fun ServerListItem(
                     )
                     val iconTint = colors.onSurfaceVariant.copy(alpha = 0.75f)
                     if (doubleColumnDisplay) {
-                        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                        IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(28.dp)) {
                             Icon(
                                 painterResource(R.drawable.ic_more_vert_24dp),
                                 stringResource(R.string.acc_more),
-                                Modifier.size(20.dp),
+                                Modifier.size(17.dp),
                                 tint = iconTint
                             )
                         }
                     } else {
-                        IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                        IconButton(onClick = { actions.share(row.guid, row.profile) }, Modifier.size(28.dp)) {
                             Icon(
                                 painterResource(R.drawable.ic_share_24dp),
                                 stringResource(R.string.title_configuration_share),
-                                Modifier.size(19.dp),
+                                Modifier.size(16.dp),
                                 tint = iconTint
                             )
                         }
-                        IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(32.dp)) {
+                        IconButton(onClick = { actions.edit(row.guid, row.profile) }, Modifier.size(28.dp)) {
                             Icon(
                                 painterResource(R.drawable.ic_edit_24dp),
                                 stringResource(R.string.acc_edit),
-                                Modifier.size(19.dp),
+                                Modifier.size(16.dp),
                                 tint = iconTint
                             )
                         }
-                        IconButton(onClick = { actions.remove(row.guid) }, Modifier.size(32.dp)) {
+                        IconButton(onClick = { actions.remove(row.guid) }, Modifier.size(28.dp)) {
                             Icon(
                                 painterResource(R.drawable.ic_delete_24dp),
                                 stringResource(R.string.acc_delete),
-                                Modifier.size(19.dp),
+                                Modifier.size(16.dp),
                                 tint = iconTint
                             )
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     if (row.subscriptionBadge.isNotBlank()) {
                         Box(
                             Modifier
-                                .size(20.dp)
+                                .size(17.dp)
                                 .clip(CircleShape)
                                 .background(colors.primary.copy(alpha = 0.14f)), Alignment.Center
                         ) {
-                            Text(row.subscriptionBadge.uppercase(), fontSize = 10.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                            Text(row.subscriptionBadge.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Medium, color = colors.primary)
                         }
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                     }
                     Text(
                         row.statistics,
                         Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Light),
+                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Light),
                         color = colors.onSurfaceVariant.copy(alpha = 0.85f),
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     // Protocol shown as a quiet tinted tag rather than loud orange text.
                     Text(
                         row.typeDescription,
                         Modifier
                             .weight(1f, fill = false)
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(5.dp))
                             .background(colors.onSurface.copy(alpha = 0.06f))
-                            .padding(horizontal = 7.dp, vertical = 1.5.dp),
-                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 10.5.sp, lineHeight = 14.sp, letterSpacing = 0.4.sp),
+                            .padding(horizontal = 6.dp, vertical = 1.dp),
+                        style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp, lineHeight = 13.sp, letterSpacing = 0.4.sp),
                         color = colors.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis

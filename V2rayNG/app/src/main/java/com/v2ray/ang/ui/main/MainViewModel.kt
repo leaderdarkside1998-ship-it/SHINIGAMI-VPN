@@ -647,7 +647,7 @@ class MainViewModel(
         _uiState.update { it.copy(subscriptionUsage = item) }
     }
 
-
+    private fun exportAllAsync() {
         launchLoading {
             withContext(ioDispatcher) {
                 try {

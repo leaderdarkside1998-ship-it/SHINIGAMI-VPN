@@ -131,19 +131,19 @@ private fun GroupTabChip(
             .scale(scale)
             .shadow(
                 elevation = elevation,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(14.dp),
                 ambientColor = primary.copy(alpha = 0.35f),
                 spotColor = primary.copy(alpha = 0.45f)
             )
-            .clip(RoundedCornerShape(18.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(if (selected) Brush.linearGradient(listOf(primary, secondary)) else Brush.linearGradient(listOf(backgroundColor, backgroundColor)))
-            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(18.dp))
+            .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(14.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -151,7 +151,7 @@ private fun GroupTabChip(
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.labelLarge,
+            style = MaterialTheme.typography.labelMedium,
             fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
             color = textColor
         )

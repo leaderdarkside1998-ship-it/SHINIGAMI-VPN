@@ -224,23 +224,9 @@ fun SubEditScreen(
                 keyboardType = KeyboardType.Number,
                 placeholder = stringResource(R.string.sub_setting_override_tip)
             )
-            SettingsSwitchItem(
-                title = stringResource(R.string.sub_setting_enable),
-                checked = enabled,
-                onCheckedChange = { enabled = it }
-            )
-
-            SettingsSwitchItem(
-                title = stringResource(R.string.sub_auto_update),
-                checked = autoUpdate,
-                onCheckedChange = { autoUpdate = it }
-            )
-
-            FormTextField(
-                stringResource(R.string.title_pref_auto_update_interval),
-                updateInterval, { updateInterval = it }, keyboardType = KeyboardType.Number
-            )
-
+            // "Enable update" and "Enable auto-update" (+ its interval) now live on the
+            // subscription list screen itself, under each entry, with quick interval presets --
+            // not duplicated here.
             SettingsSwitchItem(
                 title = stringResource(R.string.sub_allow_insecure_url),
                 checked = allowInsecureUrl,

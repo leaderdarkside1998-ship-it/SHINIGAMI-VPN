@@ -12,20 +12,15 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,30 +29,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
 import com.v2ray.ang.dto.entities.SubscriptionItem
-import com.v2ray.ang.util.Utils
+import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 
 /**
- * Card pinned above the group tabs showing the current group's subscription traffic quota
- * (from the `subscription-userinfo` header captured on the last update). All the actual
- * numbers (used / remaining) are rendered *inside* the progress bar itself, baked into
- * whichever colored segment they belong to -- the bold/filled segment carries the used
- * amount, the faint/track segment carries what's left. Renders a quiet "no data yet" row
- * instead of the bar when the subscription has never reported quota info -- most panels do,
- * but plenty of private/self hosted ones never send the header at all, and that's a normal,
- * unremarkable state here.
+ * Row pinned above the group tabs showing the current group's subscription traffic quota
+ * (from the `subscription-userinfo` header captured on the last update). Deliberately frameless
+ * -- no card background/border/shadow -- so it reads as part of the page rather than a boxed
+ * widget. The quota is summarized as a single circular percentage gauge; the raw used/remaining
+ * byte counts sit underneath as plain text rather than being baked into a bar. Renders a quiet
+ * "no data yet" row instead of the gauge when the subscription has never reported quota info --
+ * most panels do, but plenty of private/self hosted ones never send the header at all, and
+ * that's a normal, unremarkable state here.
  */
 @Composable
 fun SubscriptionUsageCard(
@@ -73,85 +68,98 @@ fun SubscriptionUsageCard(
     val fraction = if (total != null && total > 0) (used.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
     val animatedFraction by animateFloatAsState(
         targetValue = fraction,
-        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessVerySlow),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = 100f),
         label = "subscriptionUsageFraction"
     )
-
-    val primary = MaterialTheme.colorScheme.primary
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp)
-            .shadow(
-                elevation = 5.dp,
-                shape = RoundedCornerShape(20.dp),
-                ambientColor = primary.copy(alpha = 0.22f),
-                spotColor = primary.copy(alpha = 0.28f)
-            )
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(
-                        MaterialTheme.colorScheme.surfaceContainerHigh,
-                        MaterialTheme.colorScheme.surfaceContainer
-                    )
-                )
-            )
-            .padding(horizontal = 16.dp, vertical = 14.dp)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = stringResource(R.string.subscription_usage_title),
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            RefreshButton(refreshing = refreshing, onClick = onRefresh)
-        }
+        Text(
+            text = stringResource(R.string.subscription_usage_title),
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
 
         AnimatedVisibility(visible = !hasQuota, enter = fadeIn(), exit = fadeOut()) {
-            Text(
-                text = stringResource(R.string.subscription_usage_no_data),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 10.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.subscription_usage_no_data),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                RefreshButton(refreshing = refreshing, onClick = onRefresh)
+            }
         }
 
         AnimatedVisibility(visible = hasQuota && !hasBar, enter = fadeIn(), exit = fadeOut()) {
-            UsageOnlyPill(
-                text = stringResource(R.string.subscription_usage_used_inline, formatBytes(used)),
-                modifier = Modifier.padding(top = 12.dp)
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.subscription_usage_used_inline, formatBytes(used)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                RefreshButton(refreshing = refreshing, onClick = onRefresh)
+            }
         }
 
         AnimatedVisibility(visible = hasBar, enter = fadeIn(), exit = fadeOut()) {
-            Column {
-                UsageBar(
-                    fraction = animatedFraction,
-                    usedText = stringResource(R.string.subscription_usage_used_inline, formatBytes(used)),
-                    remainingText = stringResource(
-                        R.string.subscription_usage_remaining_inline,
-                        formatBytes(((total ?: 0L) - used).coerceAtLeast(0L))
-                    ),
-                    modifier = Modifier.padding(top = 12.dp)
-                )
+            Column(Modifier.padding(top = 6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    RefreshButton(refreshing = refreshing, onClick = onRefresh)
+                    PercentGauge(fraction = animatedFraction)
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.subscription_usage_used_inline, formatBytes(used)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = stringResource(
+                            R.string.subscription_usage_remaining_inline,
+                            formatBytes(((total ?: 0L) - used).coerceAtLeast(0L))
+                        ),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
                 val expireSeconds = usage?.trafficExpireEpochSeconds
                 if (expireSeconds != null && expireSeconds > 0) {
                     Text(
                         text = stringResource(
                             R.string.subscription_usage_expire,
-                            Utils.formatTimestamp(expireSeconds * 1000)
+                            com.v2ray.ang.util.Utils.formatTimestamp(expireSeconds * 1000)
                         ),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 6.dp)
                     )
                 }
             }
@@ -160,129 +168,52 @@ fun SubscriptionUsageCard(
 }
 
 /**
- * The bar itself: one pill split into two colored segments whose widths track [fraction].
- * Each segment carries its own number baked directly into it -- there's nothing about the
- * usage rendered outside the pill. A subtle glossy highlight animates across the filled
- * segment for a soft, three-dimensional feel; the whole pill also casts a small drop shadow.
+ * Compact circular gauge: a thin ring that fills proportionally to [fraction], with the
+ * percentage set inside as clean, bold, gradient-tinted numerals. This is the only thing
+ * carrying the usage number now -- no bar, no baked-in used/remaining strings, no card chrome
+ * around it, just the ring and the number.
  */
 @Composable
-private fun UsageBar(
-    fraction: Float,
-    usedText: String,
-    remainingText: String,
-    modifier: Modifier = Modifier
-) {
+private fun PercentGauge(fraction: Float, modifier: Modifier = Modifier) {
     val primary = MaterialTheme.colorScheme.primary
     val secondary = MaterialTheme.colorScheme.secondary
-    val trackColor = MaterialTheme.colorScheme.surfaceVariant
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    val diameter = 46.dp
+    val stroke = 4.dp
 
-    val glowTransition = rememberInfiniteTransition(label = "usageBarGlow")
-    val glowAlpha by glowTransition.animateFloat(
-        initialValue = 0.10f,
-        targetValue = 0.24f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1400, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "usageBarGlowAlpha"
-    )
-
-    // Weight can't be zero, and a segment holding ~0% still deserves a sliver of color so the
-    // pill always visibly reads as two parts.
-    val usedWeight = fraction.coerceIn(0.045f, 0.955f)
-    val remainingWeight = 1f - usedWeight
-    val minTextWidth = 58.dp
-
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(34.dp)
-            .shadow(
-                elevation = 3.dp,
-                shape = RoundedCornerShape(17.dp),
-                ambientColor = Color.Black.copy(alpha = 0.22f),
-                spotColor = Color.Black.copy(alpha = 0.22f)
-            )
-            .clip(RoundedCornerShape(17.dp))
-            .background(trackColor)
-    ) {
-        val usedWidth = maxWidth * usedWeight
-        val remainingWidth = maxWidth * remainingWeight
-
-        Row(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .weight(usedWeight)
-                    .fillMaxHeight()
-                    .background(Brush.horizontalGradient(listOf(primary, secondary))),
-                contentAlignment = Alignment.Center
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(13.dp)
-                        .align(Alignment.TopCenter)
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(Color.White.copy(alpha = glowAlpha), Color.Transparent)
-                            )
-                        )
-                )
-                if (usedWidth > minTextWidth) {
-                    Text(
-                        text = usedText,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .weight(remainingWeight)
-                    .fillMaxHeight(),
-                contentAlignment = Alignment.Center
-            ) {
-                if (remainingWidth > minTextWidth) {
-                    Text(
-                        text = remainingText,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 8.dp)
-                    )
-                }
-            }
-        }
-    }
-}
-
-/** Fallback for the (rare) case a panel reports bytes used but never sends a quota total. */
-@Composable
-private fun UsageOnlyPill(text: String, modifier: Modifier = Modifier) {
-    val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(34.dp)
-            .shadow(3.dp, RoundedCornerShape(17.dp), ambientColor = Color.Black.copy(alpha = 0.2f))
-            .clip(RoundedCornerShape(17.dp))
-            .background(Brush.horizontalGradient(listOf(primary, secondary))),
+        modifier = modifier.size(diameter),
         contentAlignment = Alignment.Center
     ) {
+        Canvas(modifier = Modifier.size(diameter)) {
+            val strokePx = stroke.toPx()
+            val arcSize = Size(size.width - strokePx, size.height - strokePx)
+            val topLeft = androidx.compose.ui.geometry.Offset(strokePx / 2f, strokePx / 2f)
+
+            drawArc(
+                color = trackColor,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokePx, cap = StrokeCap.Round)
+            )
+            drawArc(
+                brush = Brush.sweepGradient(listOf(primary, secondary, primary)),
+                startAngle = -90f,
+                sweepAngle = 360f * fraction.coerceIn(0f, 1f),
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = strokePx, cap = StrokeCap.Round)
+            )
+        }
         Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            text = "${(fraction * 100f).roundToInt()}%",
+            style = MaterialTheme.typography.labelLarge.copy(fontSize = 12.sp),
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
         )
     }
 }
@@ -303,14 +234,14 @@ private fun RowScope.RefreshButton(refreshing: Boolean, onClick: () -> Unit) {
     IconButton(
         onClick = onClick,
         enabled = !refreshing,
-        modifier = Modifier.size(36.dp)
+        modifier = Modifier.size(32.dp)
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_refresh_24dp),
             contentDescription = description,
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier
-                .size(18.dp)
+                .size(17.dp)
                 .rotate(if (refreshing) rotation else 0f)
         )
     }
