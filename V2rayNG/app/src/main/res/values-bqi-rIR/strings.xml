@@ -24,7 +24,7 @@
     <string name="toast_services_failure">ره وستن سرویس وا مووفقیت ٱنجوم نوابی</string>
 
     <!--ServerActivity-->
-    <string name="title_server">فایل کانفیگ</string>
+    <string name="title_server">SH</string>
     <string name="menu_item_add_config">ٱووردن کانفیگ</string>
     <string name="menu_item_save_config">زفت کردن کانفیگ</string>
     <string name="menu_item_edit_config">آلشتکاری کانفیگ</string>

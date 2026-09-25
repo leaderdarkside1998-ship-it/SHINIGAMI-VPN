@@ -24,7 +24,7 @@
     <string name="toast_services_failure">启动服务失败</string>
 
     <!--ServerActivity-->
-    <string name="title_server">配置项</string>
+    <string name="title_server">SH</string>
     <string name="menu_item_add_config">添加配置</string>
     <string name="menu_item_save_config">保存配置</string>
     <string name="menu_item_edit_config">编辑配置</string>

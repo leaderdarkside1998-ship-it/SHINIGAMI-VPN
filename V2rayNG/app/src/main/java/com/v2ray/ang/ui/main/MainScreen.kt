@@ -208,11 +208,6 @@ fun MainScreen(
                         text = stringResource(R.string.banner_buy_tunneled_servers),
                         telegramUrl = "https://t.me/IDSHINIGAMI"
                     )
-                    SubscriptionUsageCard(
-                        usage = uiState.subscriptionUsage,
-                        refreshing = uiState.subscriptionUsageRefreshing,
-                        onRefresh = { onAction(MainAction.RefreshSubscriptionUsage) }
-                    )
                     if (groups.size > 1) {
                         GroupTabBar(
                             groups = groups,
@@ -228,6 +223,11 @@ fun MainScreen(
                             }
                         )
                     }
+                    SubscriptionUsageCard(
+                        usage = uiState.subscriptionUsage,
+                        refreshing = uiState.subscriptionUsageRefreshing,
+                        onRefresh = { onAction(MainAction.RefreshSubscriptionUsage) }
+                    )
 
                     HorizontalPager(
                         state = pagerState,

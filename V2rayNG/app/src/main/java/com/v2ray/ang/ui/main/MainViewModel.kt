@@ -128,11 +128,17 @@ class MainViewModel(
 
     private fun handleServiceEvent(event: MainServiceEvent) {
         when (event) {
-            is MainServiceEvent.StateRunning -> updateRunningState(true, clearTestingText = false, startedAtMillis = event.startedAtMillis)
+            is MainServiceEvent.StateRunning -> {
+                val wasRunning = uiState.value.isRunning
+                updateRunningState(true, clearTestingText = false, startedAtMillis = event.startedAtMillis)
+                if (!wasRunning) autoTestConnectedServer()
+            }
             MainServiceEvent.StateNotRunning -> updateRunningState(false, clearTestingText = false)
             is MainServiceEvent.StateStartSuccess -> {
                 toastSuccess(R.string.toast_services_success)
+                val wasRunning = uiState.value.isRunning
                 updateRunningState(true, startedAtMillis = event.startedAtMillis)
+                if (!wasRunning) autoTestConnectedServer()
             }
 
             is MainServiceEvent.StateStartFailure -> {
@@ -642,7 +648,6 @@ class MainViewModel(
     }
 
 
-    private fun exportAllAsync() {
         launchLoading {
             withContext(ioDispatcher) {
                 try {
@@ -961,9 +966,27 @@ class MainViewModel(
     }
 
     /**
-     * Tests a single server's real ping, triggered by tapping its bolt/ping value directly.
-     * Runs as an independent request: no global "testing" state, no bulk-request replacement
-     * (so several servers can be tapped back to back), no batching delay and no full reload.
+     * Runs the same probe as tapping the bolt icon on a server row, but automatically the
+     * moment the VPN actually connects - whether the user pressed connect in the app, used the
+     * notification's "switch server" action, or GamingEngine/BoostEngine switched servers.
+     *
+     * Without this, the ping slot on every card (and the auto-hide/"stay visible" toggle) only
+     * ever has something to show after a manual test, because [MmkvManager.encodeServerTestDelayMillis]
+     * is only ever written from that explicit test path - being connected was never enough on its
+     * own. This makes "connected" the trigger instead, so the ping shows up and then follows the
+     * normal pingAutoHide behavior (5-minute countdown, or stays until dismissed) with no forced
+     * manual test required.
+     */
+    private fun autoTestConnectedServer() {
+        val guid = dataSource.getSelectServer() ?: return
+        testSingleServerRealPing(guid)
+    }
+
+    /**
+     * Tests a single server's real ping, triggered by tapping its bolt/ping value directly (or
+     * automatically by [autoTestConnectedServer]). Runs as an independent request: no global
+     * "testing" state, no bulk-request replacement (so several servers can be tapped back to
+     * back), no batching delay and no full reload.
      */
     fun testSingleServerRealPing(guid: String) {
         val groupId = uiState.value.selectedGroupId
@@ -1040,10 +1063,17 @@ class MainViewModel(
     // ---------- Running state ----------
     private fun updateRunningState(running: Boolean, clearTestingText: Boolean = true, startedAtMillis: Long? = null) {
         if (!running || clearTestingText) testRequests.invalidateCurrent()
+        // The daemon can switch the persisted server on its own (notification "switch server"
+        // action, GamingEngine, BoostEngine) without ever notifying this ViewModel directly -
+        // it runs in a separate :daemon process. A running-state change is the one event this
+        // process reliably receives afterward, so resync the cached selection here; otherwise
+        // the server list keeps highlighting whatever was selected before that outside switch.
+        val persistedGuid = dataSource.getSelectServer()
         _uiState.update { state ->
             val wasRunning = state.isRunning
             state.copy(
                 isRunning = running,
+                selectedGuid = persistedGuid ?: state.selectedGuid,
                 isTesting = testRequests.isTesting,
                 status = runningStatus(state.status, state.isRunning, running, clearTestingText),
                 connectedSinceMillis = connectedSince(

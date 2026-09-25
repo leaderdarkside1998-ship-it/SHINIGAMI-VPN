@@ -1,24 +1,27 @@
 package com.v2ray.ang.ui.main
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,16 +34,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.AppDivider
 import kotlinx.coroutines.delay
 
+/**
+ * Bottom area of the main screen. Two clearly separate pieces, stacked, never overlapping:
+ *
+ * 1. A floating controls row (AI button + the power control) that sits above everything else.
+ * 2. The status/test bar underneath -- a standalone 3D card. Tapping it tests the current
+ *    server, same as before; it is purely a status strip, the power control never sits inside
+ *    or on top of it any more.
+ */
 @Composable
 fun MainBottomBar(
     displayText: String,
@@ -50,90 +65,72 @@ fun MainBottomBar(
     onAction: (MainAction) -> Unit,
     onAiClick: () -> Unit
 ) {
-    Box(modifier = Modifier.fillMaxWidth()) {
-        Column(
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .windowInsetsPadding(WindowInsets.navigationBars)
+    ) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .clickable(onClick = { onAction(MainAction.TestCurrentServer) })
-                .windowInsetsPadding(WindowInsets.navigationBars)
-        ) {
-            AppDivider()
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = displayText,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.semantics {
-                        contentDescription = displayText
-                    }
-                )
-            }
-        }
-        // Shared column: the small round "AI" button sits above the power control,
-        // whichever state (start FAB or running stop-pill) that control is in.
-        Column(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(end = ControlsEndPadding)
-                .offset(y = (-24).dp)
-                .navigationBarsPadding(),
-            horizontalAlignment = Alignment.End,
-            verticalArrangement = Arrangement.spacedBy(AiButtonSpacing)
+                .padding(horizontal = ControlsEndPadding, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.End
         ) {
             AiCircleButton(onClick = onAiClick)
-
+            Spacer(modifier = Modifier.width(AiButtonSpacing))
             if (isRunning) {
-                // While running, a pill in the accent color that holds the stop square and the live start-time counter
-                // takes the place of the start button, so tapping it stops the service. (The round
-                // "test connection" button was removed; the bottom bar row still tests on tap.)
                 StopTimerPill(
                     connectedSinceMillis = connectedSinceMillis,
                     onClick = { onAction(MainAction.ToggleService) }
                 )
             } else {
-                FloatingActionButton(
-                    onClick = { onAction(MainAction.ToggleService) },
-                    modifier = Modifier
-                        .offset(y = (-4).dp)
-                        .size(ControlFabSize),
-                    shape = CircleShape,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_play_24dp),
-                        contentDescription = stringResource(R.string.acc_start),
-                        tint = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                }
+                PowerFab(onClick = { onAction(MainAction.ToggleService) })
             }
         }
+
+        TestStatusBar(
+            displayText = displayText,
+            onClick = { onAction(MainAction.TestCurrentServer) }
+        )
     }
 }
 
 private val ControlFabSize = 56.dp
 private val ControlsEndPadding = 16.dp
-private val AiButtonSize = 32.dp
-private val AiButtonSpacing = 10.dp
+private val AiButtonSize = 34.dp
+private val AiButtonSpacing = 12.dp
 
 /** Small round button, labeled "AI", that opens the SHINIGAMI AI assistant screen. */
 @Composable
 private fun AiCircleButton(onClick: () -> Unit) {
     val aiDescription = stringResource(R.string.acc_shinigami_ai)
+    val secondary = MaterialTheme.colorScheme.secondary
+    val tertiary = MaterialTheme.colorScheme.tertiary
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessHigh),
+        label = "aiButtonPressScale"
+    )
     Box(
         modifier = Modifier
             .size(AiButtonSize)
+            .scale(pressScale)
+            .shadow(
+                elevation = 6.dp,
+                shape = CircleShape,
+                ambientColor = secondary.copy(alpha = 0.5f),
+                spotColor = secondary.copy(alpha = 0.6f)
+            )
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.secondary)
-            .clickable(onClick = onClick)
+            .background(Brush.linearGradient(listOf(secondary, tertiary)))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
             .semantics { contentDescription = aiDescription },
         contentAlignment = Alignment.Center
     ) {
@@ -141,7 +138,59 @@ private fun AiCircleButton(onClick: () -> Unit) {
             text = stringResource(R.string.shinigami_ai_button_label),
             color = MaterialTheme.colorScheme.onSecondary,
             style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
             fontSize = 11.sp
+        )
+    }
+}
+
+/** The start/connect control: a round, glossy, gradient-filled button -- a proper 3D power key. */
+@Composable
+private fun PowerFab(onClick: () -> Unit) {
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.9f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "powerFabPressScale"
+    )
+    Box(
+        modifier = Modifier
+            .size(ControlFabSize)
+            .scale(pressScale)
+            .shadow(
+                elevation = 10.dp,
+                shape = CircleShape,
+                ambientColor = primary.copy(alpha = 0.55f),
+                spotColor = primary.copy(alpha = 0.65f)
+            )
+            .clip(CircleShape)
+            .background(Brush.linearGradient(listOf(primary, secondary)))
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        // Glossy top highlight for a rounded, three-dimensional key rather than a flat disc.
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(ControlFabSize / 2)
+                .align(Alignment.TopCenter)
+                .clip(RoundedCornerShape(topStart = ControlFabSize / 2, topEnd = ControlFabSize / 2))
+                .background(
+                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))
+                )
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_play_24dp),
+            contentDescription = stringResource(R.string.acc_start),
+            tint = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier.size(28.dp)
         )
     }
 }
@@ -153,26 +202,49 @@ private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
     val fallbackStart = remember { System.currentTimeMillis() }
     val since = connectedSinceMillis ?: fallbackStart
     val stopDescription = stringResource(R.string.acc_stop)
-    val pillColor = MaterialTheme.colorScheme.primary
+    val primary = MaterialTheme.colorScheme.primary
+    val secondary = MaterialTheme.colorScheme.secondary
     val onPillColor = MaterialTheme.colorScheme.onPrimary
-    Row(
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "stopPillPressScale"
+    )
+    Box(
         modifier = Modifier
-            .height(48.dp)
+            .scale(pressScale)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(24.dp),
+                ambientColor = primary.copy(alpha = 0.45f),
+                spotColor = primary.copy(alpha = 0.55f)
+            )
             .clip(RoundedCornerShape(24.dp))
-            .background(pillColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp)
-            .semantics { contentDescription = stopDescription },
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(13.dp)
+            .background(Brush.linearGradient(listOf(primary, secondary)))
     ) {
-        Box(
+        Row(
             modifier = Modifier
-                .size(15.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(onPillColor)
-        )
-        ConnectionTimerText(connectedSinceMillis = since, color = onPillColor)
+                .height(48.dp)
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onClick
+                )
+                .padding(horizontal = 20.dp)
+                .semantics { contentDescription = stopDescription },
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(15.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(onPillColor)
+            )
+            ConnectionTimerText(connectedSinceMillis = since, color = onPillColor)
+        }
     }
 }
 
@@ -199,4 +271,80 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifi
         maxLines = 1,
         modifier = modifier
     )
+}
+
+/**
+ * Standalone status/test card, fully separate from the floating controls above it. Tapping
+ * anywhere on it tests the currently selected server. Styled as a lifted, slightly rounded
+ * 3D card rather than a flush full-width strip, with a small bolt icon marking it as the
+ * tap-to-test row.
+ */
+@Composable
+private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressScale by animateFloatAsState(
+        targetValue = if (isPressed) 0.985f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
+        label = "testStatusBarPressScale"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 10.dp)
+            .scale(pressScale)
+            .shadow(
+                elevation = 6.dp,
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                ambientColor = Color.Black.copy(alpha = 0.18f),
+                spotColor = Color.Black.copy(alpha = 0.18f)
+            )
+            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp))
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.surfaceContainerHigh,
+                        MaterialTheme.colorScheme.surfaceContainer
+                    )
+                )
+            )
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_bolt_24dp),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Text(
+                text = displayText,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                modifier = Modifier
+                    .weight(1f)
+                    .semantics { contentDescription = displayText }
+            )
+        }
+    }
 }

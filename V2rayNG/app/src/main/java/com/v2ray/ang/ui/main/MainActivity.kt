@@ -269,9 +269,14 @@ class MainActivity : HelperBaseComponentActivity() {
     }
 
     private fun setSelectServer(guid: String) {
-        val selected = mainViewModel.uiState.value.selectedGuid
-        if (guid != selected) {
-            mainViewModel.updateSelectedGuid(guid)
+        // Compare against the persisted selection, not the cached uiState value: the daemon
+        // process (notification "switch server", GamingEngine, BoostEngine) can change the
+        // persisted server without this ViewModel's cache ever being told. If we only checked
+        // the stale cache, tapping a server that happens to match that stale value would be
+        // silently treated as a no-op even though a different server is actually running.
+        val changed = guid != MmkvManager.getSelectServer()
+        mainViewModel.updateSelectedGuid(guid)
+        if (changed) {
             LauncherManager.restartService(this)
         }
     }

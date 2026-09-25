@@ -24,7 +24,7 @@
     <string name="toast_services_failure">সার্ভিস শুরু হতে ব্যর্থ হয়েছে</string>
 
     <!--ServerActivity-->
-    <string name="title_server">কনফিগারেশন ফাইল</string>
+    <string name="title_server">SH</string>
     <string name="menu_item_add_config">কনফিগারেশন যোগ করুন</string>
     <string name="menu_item_save_config">কনফিগারেশন সংরক্ষণ করুন</string>
     <string name="menu_item_edit_config">কনফিগারেশন সম্পাদনা করুন</string>

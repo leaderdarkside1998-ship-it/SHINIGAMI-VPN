@@ -11,6 +11,7 @@ import com.v2ray.ang.extension.isNotNullEmpty
 import com.v2ray.ang.handler.MmkvManager
 import com.v2ray.ang.handler.SettingsManager
 import com.v2ray.ang.handler.SpeedtestManager
+import com.v2ray.ang.util.NetworkReadiness
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
@@ -60,29 +61,39 @@ class RealPingWorkerService(
     private val totalCount = AtomicInteger(0)
 
     fun start() {
-        val jobs = guids.map { guid ->
-            totalCount.incrementAndGet()
-            scope.launch {
-                runningCount.incrementAndGet()
-                try {
-                    val result = if (onlyTcp) startTcping(guid) else startRealPing(guid)
-                    if (scope.isActive) {
-                        onEvent(RealPingEvent.Result(guid, result))
-                    }
-                } catch (_: Throwable) {
-                    // ignore
-                } finally {
-                    val count = totalCount.decrementAndGet()
-                    val left = runningCount.decrementAndGet()
-                    if (scope.isActive) {
-                        onEvent(RealPingEvent.Progress("$left / $count"))
-                    }
-                }
-            }
-        }
-
         scope.launch {
             try {
+                // A recent phone call (ringing, answered, or declined -- it doesn't matter) can
+                // leave the data connection flagged as "not validated" for a while even after
+                // the call ends. Every probe below is a real TCP/JNI attempt with a short
+                // timeout, so it fails and is stored as -1 while that flag is still down --
+                // that's the "server invalid" / single-test-returns--1 bug. A big group test used
+                // to "fix" this only as a side effect: enough parallel connections eventually
+                // woke the radio and re-triggered Android's own validation. Do that on purpose,
+                // once, before any real probe starts.
+                NetworkReadiness.settle(context)
+
+                val jobs = guids.map { guid ->
+                    totalCount.incrementAndGet()
+                    launch {
+                        runningCount.incrementAndGet()
+                        try {
+                            val result = if (onlyTcp) startTcping(guid) else startRealPing(guid)
+                            if (scope.isActive) {
+                                onEvent(RealPingEvent.Result(guid, result))
+                            }
+                        } catch (_: Throwable) {
+                            // ignore
+                        } finally {
+                            val count = totalCount.decrementAndGet()
+                            val left = runningCount.decrementAndGet()
+                            if (scope.isActive) {
+                                onEvent(RealPingEvent.Progress("$left / $count"))
+                            }
+                        }
+                    }
+                }
+
                 joinAll(*jobs.toTypedArray())
                 if (isActive) {
                     onEvent(RealPingEvent.Finish("0"))

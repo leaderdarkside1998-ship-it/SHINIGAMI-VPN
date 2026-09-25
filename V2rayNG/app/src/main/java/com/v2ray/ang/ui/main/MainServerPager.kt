@@ -10,6 +10,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -37,8 +38,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -55,8 +54,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
+import com.v2ray.ang.ui.compose.darken
+import com.v2ray.ang.ui.compose.lighten
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -346,31 +350,42 @@ private fun ServerListItem(
             animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
         )
     }
-    // Flat, hairline-outlined card. Selection is shown by a thin accent line, a soft accent tint and a
-    // slightly stronger outline instead of a heavy bar and shadow.
+    // Glossy 3D card: gradient body + drop shadow + accent glow ring when selected —
+    // same content and layout as before, just raised off the page instead of flat.
     val colors = MaterialTheme.colorScheme
-    val containerColor by animateColorAsState(
-        targetValue = if (isSelected) colors.primary.copy(alpha = 0.07f).compositeOver(colors.surfaceContainerLow) else colors.surfaceContainerLow,
-        label = "server_card_container"
+    val cardShape = RoundedCornerShape(14.dp)
+    val baseSurface = colors.surfaceContainerHigh
+    val topTint by animateColorAsState(
+        targetValue = if (isSelected) lighten(colors.primary, 0.25f) else lighten(baseSurface, 0.16f),
+        label = "server_card_top"
+    )
+    val bottomTint by animateColorAsState(
+        targetValue = if (isSelected) darken(colors.primary, 0.15f) else darken(baseSurface, 0.10f),
+        label = "server_card_bottom"
     )
     val outlineColor by animateColorAsState(
-        targetValue = if (isSelected) colors.primary.copy(alpha = 0.55f) else colors.outlineVariant.copy(alpha = 0.45f),
+        targetValue = if (isSelected) colors.primary.copy(alpha = 0.9f) else colors.outlineVariant.copy(alpha = 0.4f),
         label = "server_card_outline"
     )
 
-    Card(
+    Box(
         modifier = Modifier
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .padding(horizontal = 8.dp, vertical = 4.dp)
             .graphicsLayer {
                 alpha = entrance.value
                 val scale = 0.94f + entrance.value * 0.06f
                 scaleX = scale
                 scaleY = scale
-            },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = containerColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = BorderStroke(if (isSelected) 1.dp else 0.5.dp, outlineColor)
+            }
+            .shadow(
+                elevation = if (isSelected) 10.dp else 6.dp,
+                shape = cardShape,
+                ambientColor = Color.Black.copy(alpha = 0.3f),
+                spotColor = if (isSelected) colors.primary.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.4f)
+            )
+            .clip(cardShape)
+            .background(Brush.verticalGradient(listOf(topTint, bottomTint)))
+            .border(BorderStroke(if (isSelected) 1.4.dp else 0.6.dp, outlineColor), cardShape)
     ) {
         Row(
             modifier = Modifier
