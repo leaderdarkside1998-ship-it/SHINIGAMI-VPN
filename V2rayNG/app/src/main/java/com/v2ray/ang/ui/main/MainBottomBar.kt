@@ -27,11 +27,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
@@ -42,30 +44,32 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.v2ray.ang.R
-import com.v2ray.ang.ui.compose.darken
-import com.v2ray.ang.ui.compose.lighten
+import com.v2ray.ang.ui.compose.hudControlFill
+import com.v2ray.ang.ui.compose.hudOutlineBrush
 import kotlinx.coroutines.delay
 
 /**
- * Bottom area of the main screen. Three clearly separate pieces, stacked, never overlapping:
+ * Bottom area of the main screen, in the same "HUD" look as the top banner and server cards:
  *
- * 1. A centered connection headline ("Connected"/"Not connected") that reads like a proper VPN
- *    app status, not just a technical log line.
- * 2. A floating controls row (AI button + the power control) that sits above everything else.
- * 3. The status/test bar underneath -- a standalone 3D card. Tapping it tests the current
- *    server, same as before; it is purely a status strip, the power control never sits inside
- *    or on top of it any more.
+ * 1. A controls row (AI button + power control / session timer) pushed to the physical right
+ *    edge. The controls are free-standing -- no card or frame wraps them.
+ * 2. The ping-test pill underneath. Tapping it tests the current server.
+ *
+ * There is deliberately no "Connected" / "Not connected" text down here; the power control
+ * and the timer already show the state.
  */
 @Composable
 fun MainBottomBar(
@@ -81,24 +85,26 @@ fun MainBottomBar(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.navigationBars)
     ) {
-        ConnectionHeadline(isRunning = isRunning)
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = ControlsEndPadding, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.End
-        ) {
-            AiCircleButton(onClick = onAiClick)
-            Spacer(modifier = Modifier.width(AiButtonSpacing))
-            if (isRunning) {
-                StopTimerPill(
-                    connectedSinceMillis = connectedSinceMillis,
-                    onClick = { onAction(MainAction.ToggleService) }
-                )
-            } else {
-                PowerFab(onClick = { onAction(MainAction.ToggleService) })
+        // Pinned to the physical right in every language: in an RTL locale "End" would otherwise
+        // flip the whole group to the left edge.
+        CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = ControlsEndPadding, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.End
+            ) {
+                AiCircleButton(onClick = onAiClick)
+                Spacer(modifier = Modifier.width(ControlsSpacing))
+                if (isRunning) {
+                    StopTimerPill(
+                        connectedSinceMillis = connectedSinceMillis,
+                        onClick = { onAction(MainAction.ToggleService) }
+                    )
+                } else {
+                    PowerFab(onClick = { onAction(MainAction.ToggleService) })
+                }
             }
         }
 
@@ -109,56 +115,17 @@ fun MainBottomBar(
     }
 }
 
-/**
- * Big, centered "Connected" / "Not connected" headline shown above the power control, in the
- * app accent color while connected and a muted tone otherwise -- the single-glance status cue
- * every mainstream VPN app leads with, distinct from the small tap-to-test strip below it.
- */
-@Composable
-private fun ConnectionHeadline(isRunning: Boolean) {
-    val label = stringResource(
-        if (isRunning) R.string.connection_connected else R.string.connection_not_connected
-    )
-    val color = if (isRunning) {
-        MaterialTheme.colorScheme.primary
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(top = 8.dp, bottom = 2.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(if (isRunning) color else MaterialTheme.colorScheme.outlineVariant)
-        )
-        Spacer(modifier = Modifier.width(7.dp))
-        Text(
-            text = label,
-            color = color,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.2.sp
-        )
-    }
-}
-
-private val ControlFabSize = 76.dp
+private val PowerButtonSize = 44.dp
+private val AiButtonSize = 32.dp
+private val StopPillHeight = 32.dp
 private val ControlsEndPadding = 14.dp
-private val AiButtonSize = 30.dp
-private val AiButtonSpacing = 10.dp
+private val ControlsSpacing = 10.dp
 
 /** Small round button, labeled "AI", that opens the SHINIGAMI AI assistant screen. */
 @Composable
 private fun AiCircleButton(onClick: () -> Unit) {
     val aiDescription = stringResource(R.string.acc_shinigami_ai)
-    val secondary = MaterialTheme.colorScheme.secondary
-    val tertiary = MaterialTheme.colorScheme.tertiary
+    val primary = MaterialTheme.colorScheme.primary
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -171,20 +138,14 @@ private fun AiCircleButton(onClick: () -> Unit) {
             .size(AiButtonSize)
             .scale(pressScale)
             .shadow(
-                elevation = 5.dp,
+                elevation = 4.dp,
                 shape = CircleShape,
-                ambientColor = secondary.copy(alpha = 0.5f),
-                spotColor = secondary.copy(alpha = 0.6f)
+                ambientColor = primary.copy(alpha = 0.25f),
+                spotColor = primary.copy(alpha = 0.45f)
             )
             .clip(CircleShape)
-            .background(Brush.linearGradient(listOf(lighten(secondary, 0.12f), tertiary)))
-            .border(
-                width = 0.7.dp,
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.45f), Color.Black.copy(alpha = 0.18f))
-                ),
-                shape = CircleShape
-            )
+            .background(hudControlFill(0.22f))
+            .border(width = 1.dp, brush = hudOutlineBrush(primary), shape = CircleShape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
@@ -193,49 +154,34 @@ private fun AiCircleButton(onClick: () -> Unit) {
             .semantics { contentDescription = aiDescription },
         contentAlignment = Alignment.Center
     ) {
-        // Tight highlight sheen, top-left, for the same glossy finish as the other action dots.
-        Box(
-            modifier = Modifier
-                .size(AiButtonSize)
-                .clip(CircleShape)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(Color.White.copy(alpha = 0.30f), Color.Transparent),
-                        center = Offset(AiButtonSize.value * 0.30f, AiButtonSize.value * 0.26f),
-                        radius = AiButtonSize.value * 0.45f
-                    )
-                )
-        )
         Text(
             text = stringResource(R.string.shinigami_ai_button_label),
-            color = MaterialTheme.colorScheme.onSecondary,
+            color = primary,
             style = MaterialTheme.typography.labelSmall,
             fontWeight = FontWeight.Bold,
-            fontSize = 9.5.sp
+            fontSize = 10.sp
         )
     }
 }
 
 /**
- * The start/connect control: a round, glossy, gradient-filled button -- a proper 3D power key.
- * Sized and haloed to read as the screen's main action (the way NordVPN/ExpressVPN-style apps
- * anchor around one big connect button), with a slow breathing halo while idle inviting the tap.
+ * The start/connect control: a compact round HUD key -- accent-tinted surface, illuminated
+ * outline, accent play glyph -- with a slow breathing halo while idle inviting the tap.
  */
 @Composable
 private fun PowerFab(onClick: () -> Unit) {
     val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
-        targetValue = if (isPressed) 0.9f else 1f,
+        targetValue = if (isPressed) 0.92f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "powerFabPressScale"
     )
     val haloTransition = rememberInfiniteTransition(label = "powerFabHalo")
     val haloScale by haloTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.22f,
+        targetValue = 1.18f,
         animationSpec = infiniteRepeatable(
             animation = tween(1600),
             repeatMode = RepeatMode.Reverse
@@ -243,7 +189,7 @@ private fun PowerFab(onClick: () -> Unit) {
         label = "powerFabHaloScale"
     )
     val haloAlpha by haloTransition.animateFloat(
-        initialValue = 0.28f,
+        initialValue = 0.22f,
         targetValue = 0f,
         animationSpec = infiniteRepeatable(
             animation = tween(1600),
@@ -254,23 +200,24 @@ private fun PowerFab(onClick: () -> Unit) {
     Box(contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
-                .size(ControlFabSize)
+                .size(PowerButtonSize)
                 .scale(haloScale)
                 .clip(CircleShape)
                 .background(primary.copy(alpha = haloAlpha))
         )
         Box(
             modifier = Modifier
-                .size(ControlFabSize)
+                .size(PowerButtonSize)
                 .scale(pressScale)
                 .shadow(
-                    elevation = 14.dp,
+                    elevation = 6.dp,
                     shape = CircleShape,
-                    ambientColor = primary.copy(alpha = 0.55f),
-                    spotColor = primary.copy(alpha = 0.65f)
+                    ambientColor = primary.copy(alpha = 0.3f),
+                    spotColor = primary.copy(alpha = 0.5f)
                 )
                 .clip(CircleShape)
-                .background(Brush.linearGradient(listOf(primary, secondary)))
+                .background(hudControlFill(0.30f))
+                .border(width = 1.2.dp, brush = hudOutlineBrush(primary), shape = CircleShape)
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
@@ -278,28 +225,17 @@ private fun PowerFab(onClick: () -> Unit) {
                 ),
             contentAlignment = Alignment.Center
         ) {
-        // Glossy top highlight for a rounded, three-dimensional key rather than a flat disc.
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(ControlFabSize / 2)
-                .align(Alignment.TopCenter)
-                .clip(RoundedCornerShape(topStart = ControlFabSize / 2, topEnd = ControlFabSize / 2))
-                .background(
-                    Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.22f), Color.Transparent))
-                )
-        )
-        Icon(
-            painter = painterResource(R.drawable.ic_play_24dp),
-            contentDescription = stringResource(R.string.acc_start),
-            tint = MaterialTheme.colorScheme.onPrimary,
-            modifier = Modifier.size(34.dp)
-        )
+            Icon(
+                painter = painterResource(R.drawable.ic_play_24dp),
+                contentDescription = stringResource(R.string.acc_start),
+                tint = primary,
+                modifier = Modifier.size(22.dp)
+            )
         }
     }
 }
 
-/** Pill in the app accent color: stop square + "HH:MM:SS" session counter (follows the theme color). */
+/** Compact HUD pill: stop square + "HH:MM:SS" session counter (follows the theme color). */
 @Composable
 private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
     // Fall back to the moment the pill first appeared if the service has not reported a start time.
@@ -307,8 +243,6 @@ private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
     val since = connectedSinceMillis ?: fallbackStart
     val stopDescription = stringResource(R.string.acc_stop)
     val primary = MaterialTheme.colorScheme.primary
-    val secondary = MaterialTheme.colorScheme.secondary
-    val onPillColor = MaterialTheme.colorScheme.onPrimary
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -316,47 +250,40 @@ private fun StopTimerPill(connectedSinceMillis: Long?, onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
         label = "stopPillPressScale"
     )
-    val shape = RoundedCornerShape(20.dp)
-    Box(
+    val shape = CutCornerShape(percent = 50)
+    Row(
         modifier = Modifier
+            .height(StopPillHeight)
             .scale(pressScale)
             .shadow(
-                elevation = 6.dp,
+                elevation = 5.dp,
                 shape = shape,
-                ambientColor = primary.copy(alpha = 0.45f),
-                spotColor = primary.copy(alpha = 0.55f)
+                ambientColor = primary.copy(alpha = 0.25f),
+                spotColor = primary.copy(alpha = 0.45f)
             )
             .clip(shape)
-            .background(Brush.linearGradient(listOf(lighten(primary, 0.08f), secondary)))
-            .border(
-                width = 0.7.dp,
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.4f), Color.Black.copy(alpha = 0.15f))
-                ),
-                shape = shape
+            .background(hudControlFill(0.30f))
+            .border(width = 1.dp, brush = hudOutlineBrush(primary), shape = shape)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
             )
+            .padding(horizontal = 16.dp)
+            .semantics { contentDescription = stopDescription },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .height(40.dp)
-                .clickable(
-                    interactionSource = interactionSource,
-                    indication = null,
-                    onClick = onClick
-                )
-                .padding(horizontal = 16.dp)
-                .semantics { contentDescription = stopDescription },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(11.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(onPillColor)
-            )
-            ConnectionTimerText(connectedSinceMillis = since, color = onPillColor)
-        }
+                .size(9.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(primary)
+        )
+        ConnectionTimerText(
+            connectedSinceMillis = since,
+            color = MaterialTheme.colorScheme.onSurface
+        )
     }
 }
 
@@ -378,7 +305,7 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifi
     Text(
         text = "%02d:%02d:%02d".format(h, m, sec),
         color = color,
-        fontSize = 13.5.sp,
+        fontSize = 12.sp,
         fontWeight = FontWeight.SemiBold,
         letterSpacing = 0.4.sp,
         maxLines = 1,
@@ -387,13 +314,14 @@ private fun ConnectionTimerText(connectedSinceMillis: Long, color: Color, modifi
 }
 
 /**
- * Standalone status/test card, fully separate from the floating controls above it. Tapping
- * anywhere on it tests the currently selected server. Styled as a lifted, slightly rounded
- * 3D card rather than a flush full-width strip, with a small bolt icon marking it as the
- * tap-to-test row, a soft top sheen, and a hairline rim for a more refined, less flat finish.
+ * Ping-test pill, styled exactly like the top banner (pointed ends, theme-tinted fill, thin
+ * illuminated accent outline) so the two read as one family. Tapping it tests the currently
+ * selected server.
  */
 @Composable
 private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val primary = colors.primary
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale by animateFloatAsState(
@@ -401,66 +329,47 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "testStatusBarPressScale"
     )
-    val shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)
-    val top = lighten(MaterialTheme.colorScheme.surfaceContainerHigh, 0.06f)
-    val bottom = darken(MaterialTheme.colorScheme.surfaceContainer, 0.04f)
-    Box(
+    val shape = CutCornerShape(percent = 50)
+    val base = colors.surfaceContainerHigh
+    val background = Brush.horizontalGradient(listOf(base, lerp(base, primary, 0.14f), base))
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp)
+            .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp)
+            .height(38.dp)
             .scale(pressScale)
             .shadow(
-                elevation = 5.dp,
+                elevation = 6.dp,
                 shape = shape,
-                ambientColor = Color.Black.copy(alpha = 0.2f),
-                spotColor = Color.Black.copy(alpha = 0.2f)
+                ambientColor = primary.copy(alpha = 0.25f),
+                spotColor = primary.copy(alpha = 0.45f)
             )
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(top, bottom)))
-            .border(
-                width = 0.6.dp,
-                brush = Brush.verticalGradient(
-                    listOf(Color.White.copy(alpha = 0.12f), Color.Transparent)
-                ),
-                shape = shape
-            )
+            .background(background)
+            .border(width = 1.dp, brush = hudOutlineBrush(primary), shape = shape)
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             )
+            .padding(horizontal = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Row(
+        Icon(
+            painter = painterResource(R.drawable.ic_bolt_24dp),
+            contentDescription = null,
+            tint = primary,
+            modifier = Modifier.size(16.dp)
+        )
+        Text(
+            text = displayText,
+            style = MaterialTheme.typography.bodySmall,
+            color = colors.onSurface,
+            maxLines = 1,
             modifier = Modifier
-                .fillMaxWidth()
-                .height(48.dp)
-                .padding(horizontal = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(24.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_bolt_24dp),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(14.dp)
-                )
-            }
-            Text(
-                text = displayText,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { contentDescription = displayText }
-            )
-        }
+                .weight(1f)
+                .semantics { contentDescription = displayText }
+        )
     }
 }

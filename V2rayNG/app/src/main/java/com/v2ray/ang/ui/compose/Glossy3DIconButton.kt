@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,9 +45,8 @@ import com.v2ray.ang.R
  * roundness — plus a small press-in scale so it feels like a real physical
  * button rather than a static icon.
  *
- * Used for the top-bar action row (ping/flash, theme, search, add,
- * more, close, and the drawer toggle itself) so the whole group reads
- * as one cohesive, polished control rather than plain flat icons.
+ * Used for the icon bubbles of the drawer menu rows. The main top-bar action
+ * row uses the HUD-styled [HudIconButton] instead.
  */
 @Composable
 fun Glossy3DIconButton(

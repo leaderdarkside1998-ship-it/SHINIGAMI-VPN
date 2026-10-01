@@ -57,10 +57,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalConfiguration
+import com.v2ray.ang.ui.compose.ServerCardColors
+import com.v2ray.ang.ui.compose.hudOutlineBrush
+import com.v2ray.ang.ui.compose.serverCardAccent
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
-import com.v2ray.ang.ui.compose.darken
-import com.v2ray.ang.ui.compose.lighten
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
@@ -350,27 +353,37 @@ private fun ServerListItem(
             animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing)
         )
     }
-    // Glossy 3D card: gradient body + drop shadow + accent glow ring when selected —
-    // same content and layout as before, just raised off the page instead of flat.
-    val colors = MaterialTheme.colorScheme
-    val cardShape = RoundedCornerShape(12.dp)
-    val baseSurface = colors.surfaceContainerHigh
+
+    // HUD card: the surface and every text color are fixed (dark navy + explicit high-contrast
+    // text) so NO theme can make the name/address/protocol unreadable. The active theme only
+    // drives small accents (border, check badge, protocol tag tint, bolt icon, glow).
+    val accent = serverCardAccent(MaterialTheme.colorScheme.primary)
+    val compact = doubleColumnDisplay || LocalConfiguration.current.screenWidthDp < 360
+    val cardShape = RoundedCornerShape(14.dp)
+
     val topTint by animateColorAsState(
-        targetValue = if (isSelected) lighten(colors.primary, 0.25f) else lighten(baseSurface, 0.16f),
+        targetValue = if (isSelected) {
+            androidx.compose.ui.graphics.lerp(ServerCardColors.NavySelectedTop, accent, 0.05f)
+        } else ServerCardColors.NavyTop,
         label = "server_card_top"
     )
     val bottomTint by animateColorAsState(
-        targetValue = if (isSelected) darken(colors.primary, 0.15f) else darken(baseSurface, 0.10f),
+        targetValue = if (isSelected) ServerCardColors.NavySelectedBottom else ServerCardColors.NavyBottom,
         label = "server_card_bottom"
     )
-    val outlineColor by animateColorAsState(
-        targetValue = if (isSelected) colors.primary.copy(alpha = 0.9f) else colors.outlineVariant.copy(alpha = 0.4f),
-        label = "server_card_outline"
+    val borderColor by animateColorAsState(
+        targetValue = if (isSelected) accent else ServerCardColors.BorderIdle,
+        label = "server_card_border"
     )
+    val glowColor by animateColorAsState(
+        targetValue = if (isSelected) accent.copy(alpha = 0.45f) else Color.Black.copy(alpha = 0.35f),
+        label = "server_card_glow"
+    )
+    val borderBrush: Brush = if (isSelected) hudOutlineBrush(borderColor) else SolidColor(borderColor)
 
     Box(
         modifier = Modifier
-            .padding(horizontal = 6.dp, vertical = 3.dp)
+            .padding(horizontal = 6.dp, vertical = 4.dp)
             .graphicsLayer {
                 alpha = entrance.value
                 val scale = 0.94f + entrance.value * 0.06f
@@ -378,14 +391,15 @@ private fun ServerListItem(
                 scaleY = scale
             }
             .shadow(
-                elevation = if (isSelected) 7.dp else 4.dp,
+                elevation = if (isSelected) 8.dp else 2.dp,
                 shape = cardShape,
-                ambientColor = Color.Black.copy(alpha = 0.3f),
-                spotColor = if (isSelected) colors.primary.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.4f)
+                ambientColor = glowColor,
+                spotColor = glowColor
             )
             .clip(cardShape)
             .background(Brush.verticalGradient(listOf(topTint, bottomTint)))
-            .border(BorderStroke(if (isSelected) 1.4.dp else 0.6.dp, outlineColor), cardShape)
+            // Same 1dp stroke in both states so selected and unselected cards stay the same size.
+            .border(BorderStroke(1.dp, borderBrush), cardShape)
     ) {
         Row(
             modifier = Modifier
@@ -396,22 +410,32 @@ private fun ServerListItem(
                         stateDescription = selectedStateDescription
                     }
                 }
-                .clickable { actions.select(row.guid) }
+                .clickable { actions.select(row.guid) },
+            verticalAlignment = Alignment.Top
         ) {
-            // Slim selection line (2dp, rounded ends) at the leading edge.
+            // Selection indicator: filled accent badge with a check when selected, a quiet hollow
+            // ring when not. Identical 18dp footprint in both states.
             Box(
                 Modifier
-                    .width(7.dp)
-                    .fillMaxHeight()
+                    .padding(start = if (compact) 8.dp else 12.dp, end = if (compact) 6.dp else 8.dp, top = if (compact) 11.dp else 12.dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .then(
+                        if (isSelected) Modifier.background(accent.copy(alpha = 0.18f))
+                        else Modifier
+                    )
+                    .border(
+                        BorderStroke(if (isSelected) 1.2.dp else 1.dp, if (isSelected) accent else ServerCardColors.IndicatorIdle),
+                        CircleShape
+                    ),
+                contentAlignment = Alignment.Center
             ) {
                 if (isSelected) {
-                    Box(
-                        Modifier
-                            .padding(start = 4.dp, top = 10.dp, bottom = 10.dp)
-                            .width(2.dp)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(1.dp))
-                            .background(colors.primary)
+                    Icon(
+                        painterResource(R.drawable.ic_fab_check),
+                        contentDescription = null,
+                        modifier = Modifier.size(12.dp),
+                        tint = accent
                     )
                 }
             }
@@ -419,24 +443,28 @@ private fun ServerListItem(
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(start = 3.dp, end = 8.dp, top = 6.dp, bottom = 6.dp)
+                    .padding(
+                        end = if (compact) 6.dp else 10.dp,
+                        top = if (compact) 8.dp else 9.dp,
+                        bottom = if (compact) 8.dp else 10.dp
+                    )
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         row.remarks,
                         Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyLarge.copy(
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.Light,
+                            fontSize = if (compact) 13.sp else 14.sp,
+                            lineHeight = if (compact) 17.sp else 19.sp,
+                            fontWeight = FontWeight.SemiBold,
                             letterSpacing = 0.1.sp,
                             lineBreak = LineBreak.Paragraph
                         ),
-                        color = colors.onSurface,
+                        color = ServerCardColors.TextName,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    val iconTint = colors.onSurfaceVariant.copy(alpha = 0.75f)
+                    val iconTint = ServerCardColors.IconMuted
                     if (doubleColumnDisplay) {
                         IconButton(onClick = { actions.more(row.guid, row.profile) }, Modifier.size(28.dp)) {
                             Icon(
@@ -480,33 +508,38 @@ private fun ServerListItem(
                             Modifier
                                 .size(17.dp)
                                 .clip(CircleShape)
-                                .background(colors.primary.copy(alpha = 0.14f)), Alignment.Center
+                                .background(accent.copy(alpha = 0.16f)), Alignment.Center
                         ) {
-                            Text(row.subscriptionBadge.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                            Text(row.subscriptionBadge.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Medium, color = accent)
                         }
                         Spacer(Modifier.width(5.dp))
                     }
                     Text(
                         row.statistics,
                         Modifier.weight(1f),
-                        style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Light),
-                        color = colors.onSurfaceVariant.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontSize = if (compact) 11.sp else 11.5.sp,
+                            lineHeight = 15.sp,
+                            fontWeight = FontWeight.Normal
+                        ),
+                        color = ServerCardColors.TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(5.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    // Protocol shown as a quiet tinted tag rather than loud orange text.
+                    // Protocol shown as a quiet accent-tinted tag; text color is fixed for contrast.
                     Text(
                         row.typeDescription,
                         Modifier
                             .weight(1f, fill = false)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(colors.onSurface.copy(alpha = 0.06f))
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(accent.copy(alpha = 0.12f))
+                            .border(BorderStroke(0.5.dp, accent.copy(alpha = 0.28f)), RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 1.dp),
                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 9.5.sp, lineHeight = 13.sp, letterSpacing = 0.4.sp),
-                        color = colors.onSurfaceVariant,
+                        color = ServerCardColors.TextTag,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -514,6 +547,7 @@ private fun ServerListItem(
                         guid = row.guid,
                         delayMillis = row.testDelayMillis,
                         resultText = testResult,
+                        accent = accent,
                         onTest = { actions.testPing(row.guid) }
                     )
                 }
@@ -559,6 +593,7 @@ private fun PingSlot(
     guid: String,
     delayMillis: Long,
     resultText: String,
+    accent: Color,
     onTest: () -> Unit,
 ) {
     var testing by remember { mutableStateOf(false) }
@@ -569,8 +604,12 @@ private fun PingSlot(
     // filled in for a value that has no stamp yet (one restored from storage at app start), so
     // that the 5-minute countdown below has a starting point.
     LaunchedEffect(guid, delayMillis) {
-        if (delayMillis != 0L) PingResultClock.recordIfAbsent(guid)
-        testing = false
+        // A reset to 0 happens at the START of a test, so it must not stop the "testing" pulse;
+        // only an actual result (or the timeout below) ends it.
+        if (delayMillis != 0L) {
+            PingResultClock.recordIfAbsent(guid)
+            testing = false
+        }
     }
     LaunchedEffect(testing) {
         if (testing) {
@@ -583,10 +622,21 @@ private fun PingSlot(
     // countdown actually counts down instead of being computed once and frozen.
     var now by remember { mutableLongStateOf(PingResultClock.now()) }
     LaunchedEffect(pingAutoHide, delayMillis, guid) {
+        // Always refresh first: while auto-hide was off "now" was frozen, so turning it back on
+        // would otherwise judge old results against a stale clock for a moment.
+        now = PingResultClock.now()
         if (!pingAutoHide || delayMillis == 0L) return@LaunchedEffect
-        while (true) {
-            now = PingResultClock.now()
+        // Tick until the result has expired, then stop (no endless 1-second loop afterwards).
+        while (
+            PingResultClock.isResultVisible(
+                delayMillis = delayMillis,
+                pingAutoHide = true,
+                arrivedAt = PingResultClock.arrivedAt(guid),
+                now = now,
+            )
+        ) {
             delay(1000)
+            now = PingResultClock.now()
         }
     }
 
@@ -630,7 +680,7 @@ private fun PingSlot(
             Text(
                 resultText,
                 style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp, fontWeight = FontWeight.Light),
-                color = if (delayMillis < 0L) colorPingRed else MaterialTheme.colorScheme.tertiary,
+                color = if (delayMillis < 0L) colorPingRed else ServerCardColors.PingGood,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -638,7 +688,7 @@ private fun PingSlot(
             Icon(
                 painter = painterResource(R.drawable.ic_bolt_24dp),
                 contentDescription = stringResource(R.string.connection_test_pending),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = accent,
                 modifier = Modifier
                     .size(18.dp)
                     .graphicsLayer { alpha = if (testing) pulseAlpha else 1f }

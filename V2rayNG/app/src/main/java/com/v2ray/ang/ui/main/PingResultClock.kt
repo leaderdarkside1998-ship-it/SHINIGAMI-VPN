@@ -19,8 +19,14 @@ internal object PingResultClock {
 
     private val arrivedAt = ConcurrentHashMap<String, Long>()
 
-    /** Monotonic milliseconds; one time base for both the writers and the card that reads it. */
-    fun now(): Long = System.nanoTime() / 1_000_000L
+    /**
+     * Milliseconds since boot, INCLUDING time spent in deep sleep; one time base for both the
+     * writers and the card that reads it. System.nanoTime() is not used here because it stops
+     * counting while the device sleeps, which stretched the 5-minute window far beyond 5 real
+     * minutes whenever the screen was off.
+     */
+    fun now(): Long = runCatching { android.os.SystemClock.elapsedRealtime() }
+        .getOrElse { System.nanoTime() / 1_000_000L } // plain JVM unit tests have no SystemClock
 
     /**
      * Applies a batch of results: a real value stamps that server's arrival time, 0 (the "no

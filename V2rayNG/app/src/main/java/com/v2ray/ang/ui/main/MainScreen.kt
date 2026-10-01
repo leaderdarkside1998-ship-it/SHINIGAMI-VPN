@@ -48,7 +48,13 @@ fun MainScreen(
     val groups = uiState.groups
     val isLoading by mainViewModel.isLoading.collectAsStateWithLifecycle()
     val isRunning = uiState.isRunning
-    val displayText = mainViewModel.formatStatus(uiState.status)
+    // The plain "Connected" / "Not connected" strings are not shown at the bottom any more; in
+    // those two idle states the ping pill just offers the tap-to-test hint.
+    val displayText = if (uiState.status == MainStatus.Connected || uiState.status == MainStatus.Disconnected) {
+        stringResource(R.string.connection_test_pending)
+    } else {
+        mainViewModel.formatStatus(uiState.status)
+    }
     val selectedGuid = uiState.selectedGuid
     val doubleColumnDisplay = uiState.doubleColumnDisplay
     val confirmRemove = uiState.confirmRemove

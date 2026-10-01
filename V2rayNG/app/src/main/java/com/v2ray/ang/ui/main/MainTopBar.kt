@@ -33,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
 import com.v2ray.ang.ui.compose.AppTopBar
-import com.v2ray.ang.ui.compose.Glossy3DIconButton
+import com.v2ray.ang.ui.compose.HudIconButton
 import com.v2ray.ang.ui.compose.ThemeManager
 import com.v2ray.ang.ui.compose.resolveDarkTheme
 import com.v2ray.ang.ui.compose.verticalScrollbar
@@ -84,13 +84,13 @@ fun MainTopBar(
         },
         actions = {
             if (!showSearch) {
-                // Collapsed state: one glossy 3D badge that opens the drawer.
+                // Collapsed state: one HUD badge that opens the drawer.
                 AnimatedVisibility(
                     visible = !actionsExpanded,
                     enter = fadeIn(tween(180)),
                     exit = fadeOut(tween(120))
                 ) {
-                    Glossy3DIconButton(
+                    HudIconButton(
                         icon = R.drawable.ic_actions_toggle_24dp,
                         contentDescription = stringResource(R.string.acc_more),
                         accent = true,
@@ -113,27 +113,27 @@ fun MainTopBar(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         val pingAutoHide = LocalPingAutoHide.current
-                        Glossy3DIconButton(
+                        HudIconButton(
                             icon = if (pingAutoHide) R.drawable.ic_bolt_24dp else R.drawable.ic_flash_off_24dp,
                             contentDescription = stringResource(R.string.acc_toggle_ping_auto_hide),
                             modifier = Modifier.padding(horizontal = 3.dp)
                         ) { onAction(MainAction.TogglePingAutoHide) }
 
                         val isDarkTheme = resolveDarkTheme()
-                        Glossy3DIconButton(
+                        HudIconButton(
                             icon = if (isDarkTheme) R.drawable.ic_light_mode_24dp else R.drawable.ic_dark_mode_24dp,
                             contentDescription = stringResource(R.string.acc_toggle_theme),
                             modifier = Modifier.padding(horizontal = 3.dp)
                         ) { ThemeManager.setThemeMode(if (isDarkTheme) "1" else "2") }
 
-                        Glossy3DIconButton(
+                        HudIconButton(
                             icon = R.drawable.ic_search_24dp,
                             contentDescription = stringResource(R.string.acc_search),
                             modifier = Modifier.padding(horizontal = 3.dp)
                         ) { onSearchToggle(true) }
 
                         Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            Glossy3DIconButton(
+                            HudIconButton(
                                 icon = R.drawable.ic_add_24dp,
                                 contentDescription = stringResource(R.string.acc_add),
                                 modifier = Modifier.padding(horizontal = 3.dp)
@@ -157,7 +157,7 @@ fun MainTopBar(
                         }
 
                         Box(modifier = Modifier.wrapContentSize(Alignment.TopEnd)) {
-                            Glossy3DIconButton(
+                            HudIconButton(
                                 icon = R.drawable.ic_more_vert_24dp,
                                 contentDescription = stringResource(R.string.acc_more),
                                 modifier = Modifier.padding(horizontal = 3.dp)
@@ -178,7 +178,7 @@ fun MainTopBar(
                             }
                         }
 
-                        Glossy3DIconButton(
+                        HudIconButton(
                             icon = R.drawable.ic_close_24dp,
                             contentDescription = stringResource(R.string.acc_back),
                             modifier = Modifier.padding(start = 3.dp, end = 4.dp)
