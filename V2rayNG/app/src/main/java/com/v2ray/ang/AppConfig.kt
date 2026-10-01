@@ -67,6 +67,11 @@ object AppConfig {
     const val PREF_GAMING_APPS_SET = "pref_gaming_apps_set"
     const val PREF_GAMING_ROUTE_LOCK = "pref_gaming_route_lock"
     const val PREF_GAMING_LOCKED_GUID = "pref_gaming_locked_guid"
+
+    // Mobile Legends route-probe target. MLBB does not publish a fixed public match-server IP,
+    // so Gaming Mode uses the nearest public cloud endpoint in the MENA region as a route
+    // approximation instead of pretending this is the actual game server.
+    const val MLBB_GAMING_PROBE_URL = "https://me-central-1.amazonaws.com/"
     const val PREF_BOOST_ENABLED = "pref_boost_enabled"
     const val PREF_BOOST_APPS_SET = "pref_boost_apps_set"
 

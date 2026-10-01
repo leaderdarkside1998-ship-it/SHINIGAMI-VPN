@@ -50,6 +50,7 @@ class RealPingWorkerService(
     private val context: Context,
     private val guids: List<String>,
     private val onlyTcp: Boolean = false,
+    private val delayTestUrlOverride: String? = null,
     private val onEvent: (RealPingEvent) -> Unit = {}
 ) {
     private val job = SupervisorJob()
@@ -123,7 +124,7 @@ class RealPingWorkerService(
 
         val config = MmkvManager.decodeServerConfig(guid) ?: return retFailure
         if (config.configType == EConfigType.AETHER) {
-            return AetherDelayTester.measure(context, guid, config, SettingsManager.getDelayTestUrl())
+            return AetherDelayTester.measure(context, guid, config, delayTestUrlOverride ?: SettingsManager.getDelayTestUrl())
         }
         if (!config.configType.isComplexType()
             && config.configType != EConfigType.HYSTERIA2
@@ -145,7 +146,7 @@ class RealPingWorkerService(
             return retFailure
         }
         return RealPingExecutionLimiter.run(config.configType) {
-            CoreNativeManager.measureOutboundDelay(configResult.content, SettingsManager.getDelayTestUrl())
+            CoreNativeManager.measureOutboundDelay(configResult.content, delayTestUrlOverride ?: SettingsManager.getDelayTestUrl())
         }
     }
 

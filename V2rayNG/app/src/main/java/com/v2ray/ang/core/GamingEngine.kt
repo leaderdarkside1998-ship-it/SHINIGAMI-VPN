@@ -48,13 +48,13 @@ object GamingEngine {
     )
 
     private const val CHECK_INTERVAL_MILLIS = 15_000L
-    private const val SAMPLES = 3
-    private const val CANDIDATE_SAMPLES = 2
+    private const val SAMPLES = 5
+    private const val CANDIDATE_SAMPLES = 3
     private const val DEGRADED_SCORE_THRESHOLD = 550.0
     private const val REQUIRED_BAD_STREAK = 1
     private const val MIN_IMPROVEMENT_SCORE = 12.0
     private const val FULL_SCAN_INTERVAL_MILLIS = 60_000L
-    private const val MIN_PING_IMPROVEMENT_MILLIS = 8L
+    private const val MIN_PING_IMPROVEMENT_MILLIS = 5L
     private var lastFullScanMillis = 0L
 
     fun start(context: Context, groupId: String) {
@@ -111,6 +111,12 @@ object GamingEngine {
         val candidatePool = allGuids
 
         val selectedGames = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_GAMING_APPS_SET)?.toList() ?: emptyList()
+        val mlbbSelected = selectedGames.any { it.equals("com.mobile.legends", true) || it.contains("mobile.legends", true) }
+        // For MLBB, the normal generic delay URL can be misleading: it measures a generic
+        // internet destination rather than a route near the game's MENA infrastructure.
+        // Use a regional route probe as the selection signal. This is deliberately described
+        // as an approximation because MOONTON does not publish a fixed public match-server IP.
+        val gamingTargetUrl = if (mlbbSelected) AppConfig.MLBB_GAMING_PROBE_URL else null
         val label = if (selectedGames.isEmpty()) "N/A" else selectedGames.joinToString(", ")
         if (_diagnostics.value.status == "INACTIVE") {
             // First check since the engine (re)started: say so instead of showing "N/A" for the
@@ -121,7 +127,7 @@ object GamingEngine {
             )
         }
 
-        val metrics = StabilityMeter.measure(context, currentGuid, SAMPLES)
+        val metrics = StabilityMeter.measure(context, currentGuid, SAMPLES, targetUrl = gamingTargetUrl)
         val locked = isRouteLocked()
 
         publish(currentGuid, config, metrics, locked, label, selectedGames.size)
@@ -163,7 +169,7 @@ object GamingEngine {
         var bestMetrics: RouteMetrics? = null
         for (guid in candidatePool) {
             if (guid == currentGuid) continue
-            val candidateMetrics = StabilityMeter.measure(context, guid, CANDIDATE_SAMPLES)
+            val candidateMetrics = StabilityMeter.measure(context, guid, CANDIDATE_SAMPLES, targetUrl = gamingTargetUrl)
             if (candidateMetrics.isMeasurable &&
                 (bestMetrics == null || candidateMetrics.stabilityScore > bestMetrics!!.stabilityScore)
             ) {

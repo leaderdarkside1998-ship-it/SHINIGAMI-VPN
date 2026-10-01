@@ -39,12 +39,18 @@ object StabilityMeter {
      * - packet loss: percentage of probes that failed/timed out
      * - stability score: 0..1000, higher is better, derived only from the three real values above
      */
-    suspend fun measure(context: Context, guid: String, samples: Int = 5, spacingMillis: Long = 250): RouteMetrics {
+    suspend fun measure(
+        context: Context,
+        guid: String,
+        samples: Int = 5,
+        spacingMillis: Long = 250,
+        targetUrl: String? = null
+    ): RouteMetrics {
         if (samples <= 0) return RouteMetrics(guid)
         val results = ArrayList<Long>(samples)
         repeat(samples) { index ->
             val delayMillis = try {
-                singlePing(context, guid)
+                singlePing(context, guid, targetUrl)
             } catch (_: Exception) {
                 -1L
             }
@@ -89,11 +95,11 @@ object StabilityMeter {
         )
     }
 
-    private suspend fun singlePing(context: Context, guid: String): Long =
+    private suspend fun singlePing(context: Context, guid: String, targetUrl: String? = null): Long =
         withTimeoutOrNull(PROBE_TIMEOUT_MILLIS) {
             suspendCancellableCoroutine<Long> { cont ->
                 var worker: RealPingWorkerService? = null
-                worker = RealPingWorkerService(context, listOf(guid), onlyTcp = false) { event ->
+                worker = RealPingWorkerService(context, listOf(guid), onlyTcp = false, delayTestUrlOverride = targetUrl) { event ->
                     when (event) {
                         is RealPingEvent.Result -> if (cont.isActive) cont.resume(event.delayMillis)
                         // The worker swallows a probe that throws without sending a Result, so
