@@ -124,6 +124,18 @@ class GamingAppsViewModel(application: Application) :
     )
     val routeLocked: StateFlow<Boolean> = _routeLocked.asStateFlow()
 
+    private val _engine = MutableStateFlow(
+        MmkvManager.decodeSettingsString(AppConfig.PREF_CORE_ENGINE, AppConfig.CORE_ENGINE_XRAY)
+    )
+    val engine: StateFlow<String> = _engine.asStateFlow()
+
+    fun setEngine(value: String) {
+        if (value != AppConfig.CORE_ENGINE_CLASH && value != AppConfig.CORE_ENGINE_XRAY) return
+        _engine.value = value
+        MmkvManager.encodeSettings(AppConfig.PREF_CORE_ENGINE, value)
+        SettingsChangeManager.makeRestartService()
+    }
+
     fun setRouteLocked(value: Boolean) {
         _routeLocked.value = value
         MmkvManager.encodeSettings(AppConfig.PREF_GAMING_ROUTE_LOCK, value)

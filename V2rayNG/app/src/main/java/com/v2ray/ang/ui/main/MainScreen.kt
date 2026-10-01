@@ -153,7 +153,7 @@ fun MainScreen(
             )
         }
     ) {
-        CompositionLocalProvider(LocalPingAutoHide provides uiState.pingAutoHide) {
+        CompositionLocalProvider(LocalPingAutoHide provides false) {
         Scaffold(
             contentWindowInsets = ScaffoldDefaults.contentWindowInsets,
             topBar = {

@@ -103,7 +103,7 @@ object CoreServiceManager {
      * Checks if the V2Ray service is running.
      * @return True if the service is running, false otherwise.
      */
-    fun isRunning() = coreController.isRunning
+    fun isRunning() = coreController.isRunning || ClashCoreManager.isRunning
 
     /**
      * Gets the name of the currently running server.
@@ -168,6 +168,27 @@ object CoreServiceManager {
         val config = MmkvManager.decodeServerConfig(guid) ?: error("Failed to decode server config")
 
         LogUtil.i(AppConfig.TAG, "StartCore-Manager: Starting core loop for ${config.remarks}")
+        // Mihomo is a backend alternative, not a second TUN. HEV still owns the single Android
+        // VPN interface and points at Mihomo's local SOCKS5/UDP listener.
+        if (ClashCoreManager.isEnabled()) {
+            if (config.configType == EConfigType.AETHER || config.configType == EConfigType.POLICYGROUP || config.configType == EConfigType.PROXYCHAIN) {
+                error("Selected profile type is not supported by Mihomo backend")
+            }
+            AetherCoreManager.stop()
+            ClashCoreManager.start(service, config)
+            currentConfig = config
+            NotificationManager.showNotification(currentConfig)
+            startedAtMillis = if (!isReload || startedAtMillis == 0L) System.currentTimeMillis() else startedAtMillis
+            if (!isReload) MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, startedAtContent())
+            NotificationManager.startSpeedNotification()
+            GamingEngine.start(service, config.subscriptionId)
+            BoostEngine.start(service, config.subscriptionId)
+            DnsAutoEngine.start()
+            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Mihomo backend started successfully")
+            return
+        }
+
+        ClashCoreManager.stop()
         val result = CoreConfigManager.getV2rayConfig(service, guid)
         LogUtil.d(AppConfig.TAG, result.content)
         if (!result.status) {
@@ -328,8 +349,9 @@ object CoreServiceManager {
         currentVpnInterface = null
         cancelAetherWarmUp()
         AetherCoreManager.stop()
+        ClashCoreManager.stop()
 
-        if (isRunning()) {
+        if (coreController.isRunning) {
             CoroutineScope(Dispatchers.IO).launch {
                 try {
                     coreController.stopLoop()
@@ -420,7 +442,7 @@ object CoreServiceManager {
             connectionTestScope.coroutineContext.cancelChildren()
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload start...")
 
-            coreController.stopLoop()
+            if (coreController.isRunning) coreController.stopLoop()
             launchCore(service, tunFd, isReload = true)
 
             LogUtil.i(AppConfig.TAG, "StartCore-Manager: Core reload finished")

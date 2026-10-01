@@ -62,9 +62,9 @@ class TProxyService(
     }
 
     private fun buildConfig(): String {
-        val socksPort = SettingsManager.getSocksPort()
-        val socksUsername = SettingsManager.getSocksUsername()
-        val socksPassword = SettingsManager.getSocksPassword()
+        val socksPort = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) com.v2ray.ang.core.ClashCoreManager.SOCKS_PORT else SettingsManager.getSocksPort()
+        val socksUsername = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) null else SettingsManager.getSocksUsername()
+        val socksPassword = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) null else SettingsManager.getSocksPassword()
         val vpnConfig = SettingsManager.getCurrentVpnInterfaceAddressConfig()
         val escapedSocksUsername = socksUsername?.replace("'", "''")
         val escapedSocksPassword = socksPassword?.replace("'", "''")

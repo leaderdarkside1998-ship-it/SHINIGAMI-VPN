@@ -25,6 +25,7 @@ class GamingActivity : BaseComponentActivity() {
         val enabled by viewModel.enabled.collectAsStateWithLifecycle()
         val selectedApps by viewModel.selectedApps.collectAsStateWithLifecycle()
         val routeLocked by viewModel.routeLocked.collectAsStateWithLifecycle()
+        val engine by viewModel.engine.collectAsStateWithLifecycle()
 
         AppPickerScreen(
             title = stringResource(R.string.title_gaming_mode),
@@ -39,7 +40,10 @@ class GamingActivity : BaseComponentActivity() {
             onSearch = { viewModel.filterApps(it) },
             routeLockLabel = stringResource(R.string.title_lock_gaming_route),
             routeLocked = routeLocked,
-            onRouteLockChanged = { viewModel.setRouteLocked(it) }
+            onRouteLockChanged = { viewModel.setRouteLocked(it) },
+            engineLabel = "Gaming Core",
+            engineValue = engine,
+            onEngineChanged = { viewModel.setEngine(it) }
         )
     }
 }

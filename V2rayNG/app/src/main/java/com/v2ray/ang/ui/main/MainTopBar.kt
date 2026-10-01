@@ -112,13 +112,6 @@ fun MainTopBar(
                     ) + fadeOut(tween(180))
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        val pingAutoHide = LocalPingAutoHide.current
-                        HudIconButton(
-                            icon = if (pingAutoHide) R.drawable.ic_bolt_24dp else R.drawable.ic_flash_off_24dp,
-                            contentDescription = stringResource(R.string.acc_toggle_ping_auto_hide),
-                            modifier = Modifier.padding(horizontal = 3.dp)
-                        ) { onAction(MainAction.TogglePingAutoHide) }
-
                         val isDarkTheme = resolveDarkTheme()
                         HudIconButton(
                             icon = if (isDarkTheme) R.drawable.ic_light_mode_24dp else R.drawable.ic_dark_mode_24dp,

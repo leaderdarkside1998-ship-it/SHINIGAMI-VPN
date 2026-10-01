@@ -125,12 +125,6 @@ class MainRepository(
     override fun getDoubleColumnDisplay(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_DOUBLE_COLUMN_DISPLAY, true)
 
-    override fun getPingAutoHide(): Boolean =
-        MmkvManager.decodeSettingsBool(AppConfig.PREF_PING_AUTO_HIDE, true)
-
-    override fun setPingAutoHide(value: Boolean) {
-        MmkvManager.encodeSettings(AppConfig.PREF_PING_AUTO_HIDE, value)
-    }
 
     override fun isGroupAllDisplayEnabled(): Boolean =
         MmkvManager.decodeSettingsBool(AppConfig.PREF_GROUP_ALL_DISPLAY)

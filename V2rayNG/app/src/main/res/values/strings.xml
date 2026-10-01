@@ -620,7 +620,6 @@
     <string name="acc_back">Back</string>
     <string name="acc_search">Search</string>
     <string name="acc_toggle_theme">Toggle dark / light theme</string>
-    <string name="acc_toggle_ping_auto_hide">Toggle ping auto-hide (show numbers permanently or revert to bolt after 5 minutes)</string>
     <string name="acc_add">Add configuration</string>
     <string name="acc_more">More options</string>
     <string name="acc_selected_server">Selected</string>

@@ -55,6 +55,11 @@ object AppConfig {
     const val PREF_CONFIRM_REMOVE = "pref_confirm_remove"
     const val PREF_DOUBLE_COLUMN_DISPLAY = "pref_double_column_display"
     const val PREF_PING_AUTO_HIDE = "pref_ping_auto_hide"
+    const val PREF_CORE_ENGINE = "pref_core_engine"
+    const val CORE_ENGINE_XRAY = "xray"
+    const val CORE_ENGINE_CLASH = "clash"
+    const val PORT_CLASH_SOCKS = 17890
+    const val PORT_CLASH_API = 17891
     const val PREF_GROUP_ALL_DISPLAY = "pref_group_all_display"
     const val PREF_LANGUAGE = "pref_language"
     const val PREF_APP_LOCALE_MIGRATED = "pref_app_locale_migrated"

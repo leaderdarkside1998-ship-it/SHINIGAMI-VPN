@@ -20,6 +20,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.v2ray.ang.R
+import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.AppInfo
 import com.v2ray.ang.ui.compose.AppDivider
 import com.v2ray.ang.ui.compose.AppListItem
@@ -56,7 +59,10 @@ fun AppPickerScreen(
     onSearch: (String) -> Unit,
     routeLockLabel: String? = null,
     routeLocked: Boolean = false,
-    onRouteLockChanged: ((Boolean) -> Unit)? = null
+    onRouteLockChanged: ((Boolean) -> Unit)? = null,
+    engineLabel: String? = null,
+    engineValue: String = "xray",
+    onEngineChanged: ((String) -> Unit)? = null
 ) {
     var showSearch by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
@@ -130,6 +136,22 @@ fun AppPickerScreen(
                                 checkedTrackColor = MaterialTheme.colorScheme.secondary
                             )
                         )
+                    }
+                    if (engineLabel != null && onEngineChanged != null) {
+                        var expanded by rememberSaveable { mutableStateOf(false) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(engineLabel, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+                            androidx.compose.material3.TextButton(onClick = { expanded = true }) {
+                                Text(if (engineValue == AppConfig.CORE_ENGINE_CLASH) "Clash / Mihomo" else "Xray")
+                            }
+                            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                                DropdownMenuItem(text = { Text("Xray") }, onClick = { expanded = false; onEngineChanged(AppConfig.CORE_ENGINE_XRAY) })
+                                DropdownMenuItem(text = { Text("Clash / Mihomo") }, onClick = { expanded = false; onEngineChanged(AppConfig.CORE_ENGINE_CLASH) })
+                            }
+                        }
                     }
                     if (routeLockLabel != null && onRouteLockChanged != null) {
                         Row(

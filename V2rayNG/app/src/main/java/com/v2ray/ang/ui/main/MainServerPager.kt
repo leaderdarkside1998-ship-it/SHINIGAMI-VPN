@@ -577,10 +577,7 @@ internal suspend fun PagerState.navigateToPageOptimized(
 }
 
 /**
- * Global toggle for the ping display behavior (set from the bolt/flash-off button in the top
- * bar and persisted via [MainAction.TogglePingAutoHide]). true (default): a fresh ping result
- * shows for 5 minutes then the slot reverts to the bolt icon. false: once a server has a result,
- * the number stays shown permanently and the slot never reverts to the bolt icon.
+ * Ping results are now kept visible permanently; the old bolt/flash auto-hide control was removed.
  */
 internal val LocalPingAutoHide = compositionLocalOf { true }
 
@@ -588,9 +585,7 @@ internal val LocalPingAutoHide = compositionLocalOf { true }
 private const val PING_TEST_TIMEOUT_MS = 20000L
 
 /**
- * Ping slot of a server card. Idle it shows a bolt icon (like the FL proxies screen); tapping it
- * starts a test and the bolt pulses while it runs; the result (single or group test) is then shown
- * for 5 minutes and the slot goes back to the bolt so it can be tapped again.
+ * Ping slot of a server card. Tapping it starts a test; the measured result remains visible.
  */
 @Composable
 private fun PingSlot(
@@ -601,7 +596,7 @@ private fun PingSlot(
     onTest: () -> Unit,
 ) {
     var testing by remember { mutableStateOf(false) }
-    val pingAutoHide = LocalPingAutoHide.current
+    val pingAutoHide = false
 
     // The arrival time of a result is stamped by the ViewModel when the result is applied, for
     // every server whether or not its card is on screen ([PingResultClock]). Here it is only

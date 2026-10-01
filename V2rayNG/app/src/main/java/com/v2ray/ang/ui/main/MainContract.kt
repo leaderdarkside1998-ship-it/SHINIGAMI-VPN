@@ -31,7 +31,6 @@ data class MainUiState(
     val locateTarget: LocateTarget? = null,
     val confirmRemove: Boolean = false,
     val doubleColumnDisplay: Boolean = true,
-    val pingAutoHide: Boolean = true,
     val shareQRCodeBitmap: android.graphics.Bitmap? = null,
     /** The selected group's subscription record, including whatever traffic-quota fields its
      * last update captured. Null while no group is selected, or the group has none on file yet. */
@@ -54,7 +53,6 @@ sealed interface MainAction {
     data object RemoveDuplicateServers : MainAction
     data object RemoveInvalidServers : MainAction
     data object SortByTestResults : MainAction
-    data object TogglePingAutoHide : MainAction
     data object UpdateSubscriptions : MainAction
     data object RefreshSubscriptionUsage : MainAction
     data object ExportAll : MainAction
