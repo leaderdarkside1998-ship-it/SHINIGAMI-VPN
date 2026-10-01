@@ -63,7 +63,14 @@ object CoreOutboundBuilder {
     /** Applies global outbound options (mux, protocol-specific tweaks, etc.). */
     private fun updateOutboundWithGlobalSettings(outbound: OutboundBean): Boolean {
         try {
+            val gamingMode = MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_ENABLED, false)
             var muxEnabled = MmkvManager.decodeSettingsBool(AppConfig.PREF_MUX_ENABLED, true)
+            // Multiplexing is useful for general browsing, but sharing one transport
+            // among game packets can introduce queueing/jitter under load. Gaming Mode
+            // deliberately gives the game's connections their own transport.
+            if (gamingMode) {
+                muxEnabled = false
+            }
             val protocol = outbound.protocol
             if (protocol.equals(EConfigType.SHADOWSOCKS.name, true)
                 || protocol.equals(EConfigType.SOCKS.name, true)
@@ -89,6 +96,15 @@ object CoreOutboundBuilder {
             } else {
                 outbound.mux?.enabled = false
                 outbound.mux?.concurrency = -1
+            }
+
+            if (gamingMode) {
+                val network = outbound.streamSettings?.network
+                if (network == NetworkType.TCP.type) {
+                    val sockopt = outbound.ensureSockopt()
+                    sockopt.TcpNoDelay = true
+                    sockopt.tcpFastOpen = true
+                }
             }
 
         } catch (e: Exception) {

@@ -54,8 +54,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalConfiguration
@@ -398,6 +401,7 @@ private fun ServerListItem(
             )
             .clip(cardShape)
             .background(Brush.verticalGradient(listOf(topTint, bottomTint)))
+            .serverCardHudDecor(accent = accent, isSelected = isSelected)
             // Same 1dp stroke in both states so selected and unselected cards stay the same size.
             .border(BorderStroke(1.dp, borderBrush), cardShape)
     ) {
@@ -696,3 +700,76 @@ private fun PingSlot(
         }
     }
 }
+
+/**
+ * Decorative "HUD" layer painted on top of the card's navy gradient and under its content:
+ * soft accent glows in two corners, a faint diagonal hatch, a lit top edge and small
+ * corner brackets. It only draws (no layout, no state) and is cached per size, so it costs
+ * nothing while scrolling. Selected cards get a stronger version of the same pattern.
+ */
+private fun Modifier.serverCardHudDecor(accent: Color, isSelected: Boolean): Modifier =
+    drawWithCache {
+        val w = size.width
+        val h = size.height
+        val glowStrength = if (isSelected) 1f else 0.55f
+
+        // Main glow from the top-end corner (where the name sits in RTL), second cooler glow
+        // from the bottom-start corner so the card never looks like a flat slab.
+        val glowTopEnd = Brush.radialGradient(
+            colors = listOf(accent.copy(alpha = 0.26f * glowStrength), Color.Transparent),
+            center = Offset(w, 0f),
+            radius = w * 0.85f
+        )
+        val glowBottomStart = Brush.radialGradient(
+            colors = listOf(Color(0xFF4F7CFF).copy(alpha = 0.16f * glowStrength), Color.Transparent),
+            center = Offset(0f, h),
+            radius = w * 0.75f
+        )
+        val topEdge = Brush.horizontalGradient(
+            listOf(
+                Color.Transparent,
+                accent.copy(alpha = if (isSelected) 0.85f else 0.45f),
+                Color.Transparent
+            )
+        )
+
+        val hatchStep = 9.dp.toPx()
+        val hatchColor = Color.White.copy(alpha = 0.035f)
+        val hatchWidth = 0.8.dp.toPx()
+        val bracket = 7.dp.toPx()
+        val inset = 4.dp.toPx()
+        val bracketColor = accent.copy(alpha = if (isSelected) 0.75f else 0.32f)
+        val bracketWidth = 1.2.dp.toPx()
+
+        onDrawBehind {
+            drawRect(glowTopEnd)
+            drawRect(glowBottomStart)
+
+            // Diagonal hatch (45 degrees), clipped by the card's own clip.
+            var x = -h
+            while (x < w) {
+                drawLine(
+                    color = hatchColor,
+                    start = Offset(x, h),
+                    end = Offset(x + h, 0f),
+                    strokeWidth = hatchWidth
+                )
+                x += hatchStep
+            }
+
+            // Lit top edge.
+            drawLine(
+                brush = topEdge,
+                start = Offset(w * 0.08f, 0.5.dp.toPx()),
+                end = Offset(w * 0.92f, 0.5.dp.toPx()),
+                strokeWidth = 1.dp.toPx()
+            )
+
+            // Corner brackets on the two corners that are free of content (the selection ring
+            // sits top-end, the protocol tag bottom-start): top-start and bottom-end.
+            drawLine(bracketColor, Offset(inset, inset), Offset(inset + bracket, inset), bracketWidth, StrokeCap.Round)
+            drawLine(bracketColor, Offset(inset, inset), Offset(inset, inset + bracket), bracketWidth, StrokeCap.Round)
+            drawLine(bracketColor, Offset(w - inset - bracket, h - inset), Offset(w - inset, h - inset), bracketWidth, StrokeCap.Round)
+            drawLine(bracketColor, Offset(w - inset, h - inset - bracket), Offset(w - inset, h - inset), bracketWidth, StrokeCap.Round)
+        }
+    }

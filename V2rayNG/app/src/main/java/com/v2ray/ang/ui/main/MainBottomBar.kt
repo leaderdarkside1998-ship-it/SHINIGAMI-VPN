@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -329,14 +330,15 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
         animationSpec = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
         label = "testStatusBarPressScale"
     )
-    val shape = CutCornerShape(percent = 50)
+    // Fixed-size corner cuts (not percent = 50): the pill now grows to fit a two-line result, and
+    // a percentage cut would grow with the height and eat into the text.
+    val shape = CutCornerShape(size = 16.dp)
     val base = colors.surfaceContainerHigh
     val background = Brush.horizontalGradient(listOf(base, lerp(base, primary, 0.14f), base))
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp)
-            .height(38.dp)
             .scale(pressScale)
             .shadow(
                 elevation = 6.dp,
@@ -352,7 +354,8 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 20.dp),
+            .heightIn(min = 38.dp)
+            .padding(horizontal = 24.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -364,9 +367,16 @@ private fun TestStatusBar(displayText: String, onClick: () -> Unit) {
         )
         Text(
             text = displayText,
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.copy(
+                fontSize = 12.sp,
+                // Explicit line height + no font padding: Persian/Arabic glyphs have tall
+                // ascenders/descenders and were being clipped by the default metrics.
+                lineHeight = 17.sp,
+                platformStyle = androidx.compose.ui.text.PlatformTextStyle(includeFontPadding = false)
+            ),
             color = colors.onSurface,
-            maxLines = 1,
+            maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             modifier = Modifier
                 .weight(1f)
                 .semantics { contentDescription = displayText }

@@ -260,6 +260,10 @@ object AppConfig {
     const val VPN = "VPN"
     const val VPN_MTU = 1500
 
+    // WireGuard-style MTU cap used only while Gaming Mode is active. Keeping the
+    // outer tunnel below Ethernet MTU reduces fragmentation on UDP-heavy games.
+    const val GAMING_VPN_MTU = 1420
+
     /** Root (system-wide) mode runtime constants. */
     const val ROOT_RUNTIME_DIR = "sys_cache"
     const val ROOT_IPTABLES_CHAIN = "CORE_FILTER"

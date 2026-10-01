@@ -407,7 +407,17 @@ object SettingsManager {
      * Get the VPN MTU from settings, defaulting to AppConfig.VPN_MTU.
      */
     fun getVpnMtu(): Int {
-        return Utils.parseInt(MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_MTU), AppConfig.VPN_MTU)
+        val configured = Utils.parseInt(
+            MmkvManager.decodeSettingsString(AppConfig.PREF_VPN_MTU),
+            AppConfig.VPN_MTU
+        )
+        // Gaming Mode uses a WireGuard-like 1420-byte ceiling. We never increase a
+        // user-selected MTU, so custom lower MTUs remain respected.
+        return if (MmkvManager.decodeSettingsBool(AppConfig.PREF_GAMING_ENABLED, false)) {
+            minOf(configured, AppConfig.GAMING_VPN_MTU)
+        } else {
+            configured
+        }
     }
 
     /**

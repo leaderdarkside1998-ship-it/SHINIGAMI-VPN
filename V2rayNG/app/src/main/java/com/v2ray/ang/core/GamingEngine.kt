@@ -47,16 +47,20 @@ object GamingEngine {
         val timestampMillis: Long = System.currentTimeMillis()
     )
 
-    private const val CHECK_INTERVAL_MILLIS = 30_000L
-    private const val SAMPLES = 5
-    private const val CANDIDATE_SAMPLES = 3
+    private const val CHECK_INTERVAL_MILLIS = 15_000L
+    private const val SAMPLES = 3
+    private const val CANDIDATE_SAMPLES = 2
     private const val DEGRADED_SCORE_THRESHOLD = 550.0
-    private const val REQUIRED_BAD_STREAK = 3
-    private const val MIN_IMPROVEMENT_SCORE = 60.0
+    private const val REQUIRED_BAD_STREAK = 1
+    private const val MIN_IMPROVEMENT_SCORE = 12.0
+    private const val FULL_SCAN_INTERVAL_MILLIS = 60_000L
+    private const val MIN_PING_IMPROVEMENT_MILLIS = 8L
+    private var lastFullScanMillis = 0L
 
     fun start(context: Context, groupId: String) {
         stop()
         val appContext = context.applicationContext
+        lastFullScanMillis = 0L
         job = CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             while (isActive) {
                 if (isEnabled()) {
@@ -101,9 +105,10 @@ object GamingEngine {
         }
         val config = MmkvManager.decodeServerConfig(currentGuid)
         val allGuids = MmkvManager.decodeServerList(groupId)
-        val turkeyGuids = allGuids.filter { isTurkeyRoute(it) }
-        val candidatePool = turkeyGuids.ifEmpty { allGuids }
-        val usingTurkeyPool = turkeyGuids.isNotEmpty()
+        // Gaming Mode should optimize the actual lowest-latency route, not a hard-coded
+        // country. The previous Turkey-only preference could keep a slower route selected
+        // even when another saved server was measurably faster.
+        val candidatePool = allGuids
 
         val selectedGames = MmkvManager.decodeSettingsStringSet(AppConfig.PREF_GAMING_APPS_SET)?.toList() ?: emptyList()
         val label = if (selectedGames.isEmpty()) "N/A" else selectedGames.joinToString(", ")
@@ -143,28 +148,53 @@ object GamingEngine {
 
         badStreak = if (metrics.isMeasurable && metrics.stabilityScore < DEGRADED_SCORE_THRESHOLD) badStreak + 1 else 0
 
-        if (badStreak < REQUIRED_BAD_STREAK || candidatePool.size <= 1) return
-        if (!usingTurkeyPool) {
-            // No known Turkey route among the saved servers: still allow switching within the
-            // full group (better than doing nothing), but this is the documented fallback.
-            LogUtil.i(AppConfig.TAG, "GamingEngine: no Turkey-tagged route found, evaluating full group instead")
-        }
+        if (candidatePool.size <= 1) return
+
+        // Gaming Mode is deliberately aggressive about latency: do a small real-probe
+        // scan instead of waiting for three consecutive 30-second failures. A full scan
+        // is rate-limited so large server lists do not keep reconnecting the core.
+        val now = System.currentTimeMillis()
+        val shouldScan = lastFullScanMillis == 0L ||
+            now - lastFullScanMillis >= FULL_SCAN_INTERVAL_MILLIS ||
+            badStreak >= REQUIRED_BAD_STREAK
+        if (!shouldScan) return
 
         var bestGuid: String? = null
-        var bestScore = -1.0
+        var bestMetrics: RouteMetrics? = null
         for (guid in candidatePool) {
             if (guid == currentGuid) continue
             val candidateMetrics = StabilityMeter.measure(context, guid, CANDIDATE_SAMPLES)
-            if (candidateMetrics.isMeasurable && candidateMetrics.stabilityScore > bestScore) {
-                bestScore = candidateMetrics.stabilityScore
+            if (candidateMetrics.isMeasurable &&
+                (bestMetrics == null || candidateMetrics.stabilityScore > bestMetrics!!.stabilityScore)
+            ) {
+                bestMetrics = candidateMetrics
                 bestGuid = guid
             }
-            // A long candidate scan must not let the published snapshot age out.
             emit(_diagnostics.value)
         }
+        lastFullScanMillis = now
         badStreak = 0
-        if (bestGuid != null && metrics.isMeasurable && bestScore - metrics.stabilityScore >= MIN_IMPROVEMENT_SCORE) {
-            pendingRollback = PendingRollback(switchedToGuid = bestGuid, previousGuid = currentGuid, previousScore = metrics.stabilityScore)
+
+        val currentPing = metrics.pingMillis
+        val bestPing = bestMetrics?.pingMillis ?: -1L
+        val scoreImproved = bestMetrics != null &&
+            metrics.isMeasurable &&
+            bestMetrics!!.stabilityScore - metrics.stabilityScore >= MIN_IMPROVEMENT_SCORE
+        val pingImproved = currentPing >= 0L &&
+            bestPing >= 0L &&
+            currentPing - bestPing >= MIN_PING_IMPROVEMENT_MILLIS
+
+        if (bestGuid != null && metrics.isMeasurable && (scoreImproved || pingImproved)) {
+            pendingRollback = PendingRollback(
+                switchedToGuid = bestGuid,
+                previousGuid = currentGuid,
+                previousScore = metrics.stabilityScore
+            )
+            LogUtil.i(
+                AppConfig.TAG,
+                "GamingEngine: switching to lower-latency route " +
+                    "$currentPing ms -> $bestPing ms"
+            )
             switchTo(bestGuid)
         }
     }
@@ -176,14 +206,6 @@ object GamingEngine {
         // selection. SettingsChangeManager.makeRestartService() would silently do nothing here --
         // see the comment on CoreServiceManager.reloadForRouteSwitch().
         CoreServiceManager.reloadForRouteSwitch()
-    }
-
-    private fun isTurkeyRoute(guid: String): Boolean {
-        val remarks = MmkvManager.decodeServerConfig(guid)?.remarks ?: return false
-        if (remarks.contains("ترکیه") || remarks.contains("🇹🇷")) return true
-        val lower = remarks.lowercase()
-        if (lower.contains("turkey") || lower.contains("türkiye") || lower.contains("turkiye")) return true
-        return Regex("(?<![a-z])tr(?![a-z])", RegexOption.IGNORE_CASE).containsMatchIn(remarks)
     }
 
     private fun publish(
