@@ -126,6 +126,7 @@ class GamingAppsViewModel(application: Application) :
 
     private val _engine = MutableStateFlow(
         MmkvManager.decodeSettingsString(AppConfig.PREF_CORE_ENGINE, AppConfig.CORE_ENGINE_XRAY)
+            ?: AppConfig.CORE_ENGINE_XRAY
     )
     val engine: StateFlow<String> = _engine.asStateFlow()
 
