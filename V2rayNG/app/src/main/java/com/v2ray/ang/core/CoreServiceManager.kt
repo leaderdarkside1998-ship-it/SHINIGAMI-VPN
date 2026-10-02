@@ -171,21 +171,38 @@ object CoreServiceManager {
         // Mihomo is a backend alternative, not a second TUN. HEV still owns the single Android
         // VPN interface and points at Mihomo's local SOCKS5/UDP listener.
         if (ClashCoreManager.isEnabled()) {
-            if (config.configType == EConfigType.AETHER || config.configType == EConfigType.POLICYGROUP || config.configType == EConfigType.PROXYCHAIN) {
-                error("Selected profile type is not supported by Mihomo backend")
+            // Mihomo needs the HEV bridge, a bundled binary and a protocol it can speak. If any of
+            // that is missing, or it fails to start, fall back to Xray instead of leaving every
+            // server dead.
+            val unsupportedType = config.configType == EConfigType.AETHER ||
+                config.configType == EConfigType.POLICYGROUP || config.configType == EConfigType.PROXYCHAIN
+            val fallbackReason = when {
+                !SettingsManager.isUsingHevTun() -> "HEV TUN is disabled"
+                !ClashCoreManager.isAvailable(service) -> "Mihomo binary is not bundled"
+                unsupportedType -> "profile type ${config.configType} is not supported by Mihomo"
+                else -> null
             }
-            AetherCoreManager.stop()
-            ClashCoreManager.start(service, config)
-            currentConfig = config
-            NotificationManager.showNotification(currentConfig)
-            startedAtMillis = if (!isReload || startedAtMillis == 0L) System.currentTimeMillis() else startedAtMillis
-            if (!isReload) MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, startedAtContent())
-            NotificationManager.startSpeedNotification()
-            GamingEngine.start(service, config.subscriptionId)
-            BoostEngine.start(service, config.subscriptionId)
-            DnsAutoEngine.start()
-            LogUtil.i(AppConfig.TAG, "StartCore-Manager: Mihomo backend started successfully")
-            return
+            if (fallbackReason == null) {
+                try {
+                    AetherCoreManager.stop()
+                    ClashCoreManager.start(service, config)
+                    currentConfig = config
+                    NotificationManager.showNotification(currentConfig)
+                    startedAtMillis = if (!isReload || startedAtMillis == 0L) System.currentTimeMillis() else startedAtMillis
+                    if (!isReload) MessageHelper.sendMsg2UI(service, AppConfig.MSG_STATE_START_SUCCESS, startedAtContent())
+                    NotificationManager.startSpeedNotification()
+                    GamingEngine.start(service, config.subscriptionId)
+                    BoostEngine.start(service, config.subscriptionId)
+                    DnsAutoEngine.start()
+                    LogUtil.i(AppConfig.TAG, "StartCore-Manager: Mihomo backend started successfully")
+                    return
+                } catch (e: Exception) {
+                    ClashCoreManager.stop()
+                    LogUtil.e(AppConfig.TAG, "StartCore-Manager: Mihomo failed (${e.message}), falling back to Xray", e)
+                }
+            } else {
+                LogUtil.w(AppConfig.TAG, "StartCore-Manager: Mihomo skipped ($fallbackReason), using Xray")
+            }
         }
 
         ClashCoreManager.stop()

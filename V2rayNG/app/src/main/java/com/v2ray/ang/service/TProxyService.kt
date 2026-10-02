@@ -62,9 +62,11 @@ class TProxyService(
     }
 
     private fun buildConfig(): String {
-        val socksPort = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) com.v2ray.ang.core.ClashCoreManager.SOCKS_PORT else SettingsManager.getSocksPort()
-        val socksUsername = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) null else SettingsManager.getSocksUsername()
-        val socksPassword = if (com.v2ray.ang.core.ClashCoreManager.isEnabled()) null else SettingsManager.getSocksPassword()
+        // Follow the backend that actually launched, not the saved preference: Mihomo can fall back to Xray.
+        val useClash = com.v2ray.ang.core.ClashCoreManager.active
+        val socksPort = if (useClash) com.v2ray.ang.core.ClashCoreManager.SOCKS_PORT else SettingsManager.getSocksPort()
+        val socksUsername = if (useClash) null else SettingsManager.getSocksUsername()
+        val socksPassword = if (useClash) null else SettingsManager.getSocksPassword()
         val vpnConfig = SettingsManager.getCurrentVpnInterfaceAddressConfig()
         val escapedSocksUsername = socksUsername?.replace("'", "''")
         val escapedSocksPassword = socksPassword?.replace("'", "''")

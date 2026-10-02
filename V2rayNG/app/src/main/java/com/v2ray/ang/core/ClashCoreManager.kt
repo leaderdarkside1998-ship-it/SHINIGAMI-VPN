@@ -1,7 +1,6 @@
 package com.v2ray.ang.core
 
 import android.content.Context
-import android.os.Build
 import com.v2ray.ang.AppConfig
 import com.v2ray.ang.dto.entities.ProfileItem
 import com.v2ray.ang.enums.EConfigType
@@ -18,18 +17,33 @@ import java.util.concurrent.atomic.AtomicReference
  */
 object ClashCoreManager {
     const val SOCKS_PORT = AppConfig.PORT_CLASH_SOCKS
-    private const val BINARY_NAME = "mihomo"
+    // Shipped as a native library (app/libs/<abi>/libmihomo.so) so Android extracts it into
+    // nativeLibraryDir, the only app-owned location from which a binary may be executed on
+    // Android 10+ (executing files copied into filesDir is blocked by SELinux).
+    private const val BINARY_NAME = "libmihomo.so"
     private const val READY_TIMEOUT_MS = 6_000L
     private val processRef = AtomicReference<Process?>()
 
     val isRunning: Boolean get() = processRef.get()?.isAlive == true
+
+    /** True only while Mihomo is the backend that was actually launched for the current session. */
+    @Volatile
+    var active: Boolean = false
+        private set
+
+    private fun binary(context: Context): File = File(context.applicationInfo.nativeLibraryDir, BINARY_NAME)
+
+    /** Whether the Mihomo binary is bundled in this build for the device ABI. */
+    fun isAvailable(context: Context): Boolean = binary(context).exists()
 
     fun isEnabled(): Boolean = com.v2ray.ang.handler.MmkvManager
         .decodeSettingsString(AppConfig.PREF_CORE_ENGINE, AppConfig.CORE_ENGINE_XRAY) == AppConfig.CORE_ENGINE_CLASH
 
     fun start(context: Context, profile: ProfileItem) {
         stop()
-        val binary = ensureBinary(context)
+        val binary = binary(context)
+        if (!binary.exists()) error("Mihomo binary (libmihomo.so) is missing from this build")
+        if (!binary.canExecute()) binary.setExecutable(true)
         val workDir = File(context.filesDir, "mihomo").apply { mkdirs() }
         val config = File(workDir, "config.yaml").apply { writeText(buildConfig(profile)) }
         val process = ProcessBuilder(binary.absolutePath, "-d", workDir.absolutePath, "-f", config.absolutePath)
@@ -44,14 +58,22 @@ object ClashCoreManager {
         }.apply { isDaemon = true; name = "mihomo-log" }.start()
         val deadline = System.currentTimeMillis() + READY_TIMEOUT_MS
         while (System.currentTimeMillis() < deadline) {
-            if (accepts(SOCKS_PORT)) return
-            if (!process.isAlive) error("Mihomo exited during startup")
+            if (accepts(SOCKS_PORT)) {
+                active = true
+                return
+            }
+            if (!process.isAlive) {
+                stop()
+                error("Mihomo exited during startup")
+            }
             Thread.sleep(100)
         }
+        stop()
         error("Mihomo SOCKS listener did not become ready")
     }
 
     fun stop() {
+        active = false
         processRef.getAndSet(null)?.let { p ->
             try { p.destroy() } catch (_: Exception) {}
             try { if (p.isAlive) p.destroyForcibly() } catch (_: Exception) {}
@@ -62,22 +84,6 @@ object ClashCoreManager {
         Socket().use { it.connect(InetSocketAddress(AppConfig.LOOPBACK, port), 200) }
         true
     } catch (_: Exception) { false }
-
-    private fun ensureBinary(context: Context): File {
-        val target = File(context.filesDir, "mihomo/$BINARY_NAME")
-        if (target.canExecute()) return target
-        val abi = Build.SUPPORTED_ABIS.firstOrNull { it == "arm64-v8a" || it == "armeabi-v7a" || it == "x86_64" || it == "x86" }
-            ?: error("Unsupported Android ABI for Mihomo")
-        val assetName = when (abi) {
-            "arm64-v8a" -> "mihomo/arm64-v8a/mihomo"
-            "armeabi-v7a" -> "mihomo/armeabi-v7a/mihomo"
-            "x86_64" -> "mihomo/x86_64/mihomo"
-            else -> "mihomo/x86/mihomo"
-        }
-        context.assets.open(assetName).use { input -> target.outputStream().use { output -> input.copyTo(output) } }
-        target.setExecutable(true)
-        return target
-    }
 
     private fun q(value: String?): String = "'" + (value ?: "").replace("'", "''") + "'"
 
